@@ -1,0 +1,33 @@
+### LISTAR SETORES
+GET http://localhost:3000/setores
+Content-Type: application/json
+
+
+### BUSCAR SETOR POR ID
+GET http://localhost:3000/setores/4
+Content-Type: application/json
+
+
+### CRIAR SETOR
+POST http://localhost:3000/setores
+Content-Type: application/json
+
+{
+  "nome": "Produção2",
+  "descricao": "Setor responsável pela linha de produção"
+}
+
+
+### ATUALIZAR SETOR
+PUT http://localhost:3000/setores/7
+Content-Type: application/json
+
+{
+  "nome": "Produção Atualizada",
+  "descricao": "Setor atualizado"
+}
+
+
+### EXCLUIR SETOR
+DELETE http://localhost:3000/setores/
+Content-Type: application/json

@@ -1,0 +1,55 @@
+### CRIAR USUÁRIO
+POST http://localhost:3000/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Diego Tecnico",
+  "email": "tecnico@teste.com",
+  "senha": "123456",
+  "role": "TECNICO"
+}
+
+
+
+### LISTAR USUÁRIOS
+GET http://localhost:3000/usuarios
+
+
+### BUSCAR POR ID
+GET http://localhost:3000/usuarios/1
+
+---
+
+### ATUALIZAR USUÁRIO
+PUT http://localhost:3000/usuarios/1
+Content-Type: application/json
+
+{
+  "nome": "Diego Atualizado",
+  "email": "admin@teste.com",
+  "role": "GESTOR",
+  "ativo": true
+}
+
+---
+
+### EXCLUIR USUÁRIO
+DELETE http://localhost:3000/usuarios/1
+
+
+### LOGIN
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@teste.com",
+  "senha": "123456"
+}
+
+###
+PATCH http://localhost:3000/usuarios/5/toggle-status
+
+
+###
+
+GET http://localhost:3000/usuarios/tecnicos

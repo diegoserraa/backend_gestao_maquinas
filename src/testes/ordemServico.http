@@ -1,0 +1,112 @@
+### LISTAR ORDENS DE SERVIÇO
+GET http://localhost:3000/ordens-servico
+Content-Type: application/json
+
+
+### BUSCAR ORDEM DE SERVIÇO POR ID
+GET http://localhost:3000/ordens-servico/20
+Content-Type: application/json
+
+
+### CRIAR ORDEM DE SERVIÇO
+POST http://localhost:3000/ordens-servico
+Content-Type: application/json
+
+{
+  "maquina_id": 20,
+  "descricao": "Máquina apresentou falha no eixo principal",
+  "status": "ABERTA",
+  "tipo_manutencao": "CORRETIVA",
+  "prioridade": "ALTA",
+  "id_tecnico": 2,
+  "resolucao": ""
+}
+
+
+### ATUALIZAR ORDEM DE SERVIÇO
+PUT http://localhost:3000/ordens-servico/1
+Content-Type: application/json
+
+{
+  "maquina_id": 1,
+  "descricao": "Falha no eixo principal - atualizado",
+  "status": "EM_ANDAMENTO",
+  "tipo_manutencao": "CORRETIVA",
+  "resolucao": ""
+}
+
+
+### FINALIZAR ORDEM DE SERVIÇO (exemplo de update final)
+PUT http://localhost:3000/ordens-servico/1
+Content-Type: application/json
+
+{
+  "maquina_id": 1,
+  "descricao": "Falha no eixo principal resolvida",
+  "status": "FINALIZADA",
+  "tipo_manutencao": "CORRETIVA",
+  "resolucao": "Substituição do rolamento do eixo",
+  "data_resolucao": "2026-01-23"
+}
+
+
+### EXCLUIR ORDEM DE SERVIÇO
+DELETE http://localhost:3000/ordens-servico/1
+Content-Type: application/json
+
+
+### =========================
+### ENUMS - ORDEM DE SERVIÇO
+### =========================
+
+### Buscar todos os enums da OS (Status + Tipo de Manutenção)
+GET http://localhost:3000/enums/os
+Content-Type: application/json
+
+
+// rotas para atualizar partes da o.s
+
+
+### =========================
+### ALTERAR STATUS
+### =========================
+PATCH http://localhost:3000/ordens-servico/56/status
+Content-Type: application/json
+
+{
+  "status": "EM_ANDAMENTO"
+}
+
+
+### =========================
+### ALTERAR PRIORIDADE
+### =========================
+PATCH http://localhost:3000/ordens-servico/56/prioridade
+Content-Type: application/json
+
+{
+  "prioridade": "MEDIA"
+}
+
+
+
+### =========================
+### ATRIBUIR TÉCNICO
+### =========================
+PATCH http://localhost:3000/ordens-servico/56/tecnico
+Content-Type: application/json
+
+{
+  "id_tecnico": 1
+}
+
+
+### =========================
+### FINALIZAR ORDEM DE SERVIÇO
+### =========================
+PATCH http://localhost:3000/ordens-servico/56/finalizar
+Content-Type: application/json
+
+{
+  "resolucao": "Substituição do rolamento do eixo principal"
+}

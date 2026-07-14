@@ -1,0 +1,19 @@
+export enum StatusOS {
+  ABERTA = "ABERTA",
+  EM_ANDAMENTO = "EM_ANDAMENTO",
+  FINALIZADA = "FINALIZADA",
+  CANCELADA = "CANCELADA"
+}
+
+export enum TipoManutencao {
+  PREVENTIVA = "PREVENTIVA",
+  CORRETIVA = "CORRETIVA",
+  PREDITIVA = "PREDITIVA"
+}
+
+export enum PrioridadeOS {
+  BAIXA = "BAIXA",
+  MEDIA = "MEDIA",
+  ALTA = "ALTA",
+  CRITICA = "CRITICA"
+}

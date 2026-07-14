@@ -1,0 +1,63 @@
+### LISTAR PARCEIROS
+GET http://localhost:3000/parceiros
+Content-Type: application/json
+
+
+### BUSCAR PARCEIRO POR ID
+GET http://localhost:3000/parceiros/1
+Content-Type: application/json
+
+
+### CRIAR PARCEIRO
+POST http://localhost:3000/parceiros
+Content-Type: application/json
+
+{
+  "nome": "Assistência Industrial Ubá",
+  "cnpj": "12.345.679/0001-90",
+  "telefone": "(32) 99999-9999",
+  "email": "contato@assistencia.com.br",
+  "observacoes": "Especializada em máquinas industriais"
+}
+
+
+### CRIAR PARCEIRO COM MESMO CNPJ (DEVE FALHAR)
+POST http://localhost:3000/parceiros
+Content-Type: application/json
+
+{
+  "nome": "Parceiro Duplicado",
+  "cnpj": "12.345.678/0001-90",
+  "telefone": "(32) 98888-8888",
+  "email": "duplicado@teste.com"
+}
+
+
+### CRIAR PARCEIRO SEM CNPJ
+POST http://localhost:3000/parceiros
+Content-Type: application/json
+
+{
+  "cnpj": "12.345.678/0001-90",
+  "nome": "Fornecedor Sem CNPJ",
+  "telefone": "(32) 97777-7777",
+  "email": "semcnpj@teste.com"
+}
+
+
+### ATUALIZAR PARCEIRO
+PUT http://localhost:3000/parceiros/1
+Content-Type: application/json
+
+{
+  "nome": "Assistência Industrial Atualizada",
+  "cnpj": "12.345.678/0001-90",
+  "telefone": "(32) 98888-7777",
+  "email": "suporte@assistencia.com.br",
+  "observacoes": "Atendimento regional"
+}
+
+
+### EXCLUIR PARCEIRO
+DELETE http://localhost:3000/parceiros/1
+Content-Type: application/json

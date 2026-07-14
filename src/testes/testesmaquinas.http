@@ -1,0 +1,146 @@
+### ============================================
+### HEALTH CHECK
+### ============================================
+
+GET http://localhost:3000/health
+
+
+### ============================================
+### LISTAR MAQUINAS
+### ============================================
+
+GET http://localhost:3000/maquinas
+
+
+### ============================================
+### BUSCAR MAQUINA POR ID
+### ============================================
+
+GET http://localhost:3000/maquinas/1
+
+
+### ============================================
+### CRIAR MAQUINA
+### ============================================
+
+POST http://localhost:3000/maquinas
+Content-Type: application/json
+
+{
+    "nome": "Torno CNC",
+    "modelo": "TC-500",
+    "fabricante": "Romi",
+    "ano": 2024,
+    "local": "Produção",
+    "status": "ATIVA",
+    "intervalo_manutencao_dias": 30
+}
+
+
+### ============================================
+### CRIAR SEGUNDA MAQUINA
+### ============================================
+
+POST http://localhost:3000/maquinas
+Content-Type: application/json
+
+{
+    "nome": "Injetora",
+    "modelo": "INJ-1000",
+    "fabricante": "Sandretto",
+    "ano": 2022,
+    "setor_id": 1,
+    "status": "ATIVA",
+    "intervalo_manutencao_dias": 15
+}
+
+
+### ============================================
+### LISTAR MAQUINAS NOVAMENTE
+### ============================================
+
+GET http://localhost:3000/maquinas
+
+
+### ============================================
+### ATUALIZAR MAQUINA
+### ============================================
+
+PUT http://localhost:3000/maquinas/53
+Content-Type: application/json
+
+{
+    "nome": "Torno CNC Atualizado",
+    "modelo": "TC-500",
+    "fabricante": "Romi",
+    "ano": 2024,
+    "setor_id": 2,
+    "status": "EM_MANUTENCAO",
+    "intervalo_manutencao_dias": 45
+}
+
+
+### ============================================
+### BUSCAR MAQUINA ATUALIZADA
+### ============================================
+
+GET http://localhost:3000/maquinas/48
+
+
+### ============================================
+### EXCLUIR MAQUINA
+### ============================================
+
+DELETE http://localhost:3000/maquinas/2
+
+
+### ============================================
+### LISTAR MAQUINAS APOS EXCLUSAO
+### ============================================
+
+GET http://localhost:3000/maquinas
+
+###
+PATCH http://localhost:3000/maquinas/4/status
+
+
+
+###
+
+POST http://localhost:3000/maquinas
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="nome"
+
+Torno CNC
+--boundary
+Content-Disposition: form-data; name="modelo"
+
+TC-500
+--boundary
+Content-Disposition: form-data; name="fabricante"
+
+Romi
+--boundary
+Content-Disposition: form-data; name="ano"
+
+2024
+--boundary
+Content-Disposition: form-data; name="setor_id"
+
+1
+--boundary
+Content-Disposition: form-data; name="status"
+
+ativa
+--boundary
+Content-Disposition: form-data; name="intervalo_manutencao_dias"
+
+30
+--boundary
+Content-Disposition: form-data; name="imagem"; filename="maquina.jpg"
+Content-Type: image/jpeg
+
+< ./teste.png
+--boundary--
