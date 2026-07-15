@@ -9,7 +9,8 @@ const app = express();
  */
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin:["https://frontend-gestao-maquinas-8p7w-plum.vercel.app",
+      "http://localhost:5173"],
   })
 );
 
