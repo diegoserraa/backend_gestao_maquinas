@@ -60,11 +60,13 @@ export class MaquinaRepository {
                 ano,
                 setor_id,
                 status,
-                intervalo_manutencao_dias
+                intervalo_manutencao_dias,
+                ultima_manutencao,
+                proxima_manutencao
             )
             VALUES
             (
-                $1,$2,$3,$4,$5,$6,$7
+                $1,$2,$3,$4,$5,$6,$7,$8,$9
             )
             RETURNING *
             `,
@@ -75,7 +77,9 @@ export class MaquinaRepository {
                 maquina.ano,
                 maquina.setor_id,
                 maquina.status,
-                maquina.intervalo_manutencao_dias
+                maquina.intervalo_manutencao_dias,
+                maquina.ultima_manutencao,
+                maquina.proxima_manutencao
             ]
         );
 
@@ -97,8 +101,10 @@ export class MaquinaRepository {
                 ano = $4,
                 setor_id = $5,
                 status = $6,
-                intervalo_manutencao_dias = $7
-            WHERE id = $8
+                intervalo_manutencao_dias = $7,
+                ultima_manutencao = $8,
+                proxima_manutencao = $9
+            WHERE id = $10
             RETURNING *
             `,
             [
@@ -109,6 +115,8 @@ export class MaquinaRepository {
                 maquina.setor_id,
                 maquina.status,
                 maquina.intervalo_manutencao_dias,
+                maquina.ultima_manutencao,
+                maquina.proxima_manutencao,
                 id
             ]
         );

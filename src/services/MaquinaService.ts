@@ -24,6 +24,18 @@ export class MaquinaService {
     // 🔥 AGORA COM IMAGEM
   async criar(maquina: IMaquina, file?: Express.Multer.File) {
 
+     // 1. calcula próxima manutenção
+    if (
+        maquina.ultima_manutencao &&
+        maquina.intervalo_manutencao_dias
+    ) {
+        maquina.proxima_manutencao =
+            this.calcularProximaManutencao(
+                maquina.ultima_manutencao,
+                maquina.intervalo_manutencao_dias
+            );
+    }
+
     // 1. cria máquina primeiro no banco
     const maquinaCriada = await this.repository.criar(maquina);
 
@@ -92,6 +104,28 @@ export class MaquinaService {
 
     if (!existente) {
         throw new Error("Máquina não encontrada");
+    }
+      // 1. recalcula próxima manutenção
+    const ultimaManutencao =
+        maquina.ultima_manutencao ??
+        existente.ultima_manutencao;
+
+
+    const intervalo =
+        maquina.intervalo_manutencao_dias ??
+        existente.intervalo_manutencao_dias;
+
+
+    if (
+        ultimaManutencao &&
+        intervalo
+    ) {
+
+        maquina.proxima_manutencao =
+            this.calcularProximaManutencao(
+                ultimaManutencao,
+                intervalo
+            );
     }
 
     // 1. atualiza dados básicos
@@ -177,4 +211,16 @@ export class MaquinaService {
 
         return this.repository.listarOsPorMaquina(maquinaId);
     }
+    private calcularProximaManutencao(
+    ultimaManutencao: string | Date,
+    intervaloDias: number
+) {
+    const data = new Date(ultimaManutencao);
+
+    data.setDate(
+        data.getDate() + intervaloDias
+    );
+
+    return data;
+}
 }
