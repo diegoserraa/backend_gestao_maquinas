@@ -213,12 +213,23 @@ export class MaquinaService {
     }
     private calcularProximaManutencao(
     ultimaManutencao: string | Date,
-    intervaloDias: number
+    intervaloDias: number | string
 ) {
+    const intervalo = parseInt(
+        String(intervaloDias),
+        10
+    );
+
+    if (isNaN(intervalo)) {
+        throw new Error(
+            `Intervalo inválido: ${intervaloDias}`
+        );
+    }
+
     const data = new Date(ultimaManutencao);
 
     data.setDate(
-        data.getDate() + intervaloDias
+        data.getDate() + intervalo
     );
 
     return data;
