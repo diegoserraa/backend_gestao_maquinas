@@ -1,3 +1,4 @@
+import { Pool } from "pg";
 import { pool } from "../database/connection";
 import { IMaquina } from "../interfaces/Imaquina";
 
@@ -171,5 +172,25 @@ export class MaquinaRepository {
     );
 
     return rows[0] ?? null;
+}
+async buscarPorDataProximaManutencao(
+    data: string
+){
+
+    const result = await pool.query(
+        `
+        SELECT *
+        FROM maquinas
+        WHERE proxima_manutencao = $1
+        AND status = 'ativa'
+        `,
+        [
+            data
+        ]
+    );
+
+
+    return result.rows;
+
 }
 }

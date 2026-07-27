@@ -104,4 +104,30 @@ export class OrdemServicoRepository {
   async excluir(id: number): Promise<void> {
     await pool.query(`DELETE FROM ordens_servico WHERE id = $1`, [id]);
   }
+  async existePreventivaPendente(
+    maquinaId:number
+):Promise<boolean>{
+
+
+    const result = await pool.query(
+    `
+    SELECT id
+    FROM ordens_servico
+    WHERE maquina_id = $1
+    AND tipo_manutencao = 'PREVENTIVA'
+    AND status IN (
+        'ABERTA',
+        'ATRIBUIDA',
+        'EM_ANDAMENTO'
+    )
+    LIMIT 1
+    `,
+    [
+        maquinaId
+    ]);
+
+
+    return result.rows.length > 0;
+
+}
 }
