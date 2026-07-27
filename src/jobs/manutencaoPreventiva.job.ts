@@ -47,6 +47,7 @@ cron.schedule(
             console.log(
                 "✅ Ordens preventivas geradas!"
             );
+     
 
 
         }catch(error){
@@ -57,6 +58,10 @@ cron.schedule(
             );
 
         }
+       
+    },
+     {
+            timezone: "America/Sao_Paulo"
+     }
 
-    }
 );

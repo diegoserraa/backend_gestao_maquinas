@@ -76,7 +76,7 @@ export class MaquinaService {
 
     // 3. gera QR Code
     const urlMaquina =
-        `${process.env.FRONTEND_URL}/maquinas/${maquinaCriada.id}`;
+        `${process.env.FRONTEND_URL}/machines/${maquinaCriada.id}`;
 
     const qrCodeBase64 =
         await QRCode.toDataURL(urlMaquina);
