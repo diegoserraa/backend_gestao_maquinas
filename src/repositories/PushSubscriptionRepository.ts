@@ -19,6 +19,12 @@ export class PushSubscriptionRepository {
             VALUES
             ($1,$2,$3,$4)
 
+            ON CONFLICT (endpoint)
+            DO UPDATE SET
+                usuario_id = EXCLUDED.usuario_id,
+                p256dh = EXCLUDED.p256dh,
+                auth = EXCLUDED.auth
+
             RETURNING *
             `,
             [
@@ -32,6 +38,7 @@ export class PushSubscriptionRepository {
         return rows[0];
     }
 
+
     async listarPorUsuario(
         usuario_id: number
     ): Promise<IPushSubscription[]> {
@@ -40,7 +47,6 @@ export class PushSubscriptionRepository {
             `
             SELECT *
             FROM push_subscriptions
-
             WHERE usuario_id = $1
             `,
             [usuario_id]
@@ -48,6 +54,7 @@ export class PushSubscriptionRepository {
 
         return rows;
     }
+
 
     async excluir(
         id: number
@@ -60,5 +67,22 @@ export class PushSubscriptionRepository {
             `,
             [id]
         );
+    }
+
+
+    async buscarPorEndpoint(
+        endpoint: string
+    ): Promise<IPushSubscription | null> {
+
+        const { rows } = await pool.query(
+            `
+            SELECT *
+            FROM push_subscriptions
+            WHERE endpoint = $1
+            `,
+            [endpoint]
+        );
+
+        return rows[0] || null;
     }
 }

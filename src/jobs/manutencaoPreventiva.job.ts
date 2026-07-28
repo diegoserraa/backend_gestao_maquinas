@@ -49,7 +49,7 @@ console.log(
 );
 
 cron.schedule(
-     "55 17 * * *",
+     "05 18 * * *",
     async()=>{
 
         console.log(
