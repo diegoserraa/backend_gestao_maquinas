@@ -7,6 +7,8 @@ import { usuarioRoutes } from "./usuario.routes";
 import { authRoutes } from "./auth.routes";
 import { anexoRoutes } from "./anexo.routes";
 import { parceiroRoutes } from "./parceiro.routes";
+import { notificacaoRoutes } from "./notificacao.routes";
+import { pushSubscriptionRoutes } from "./pushSubscription.routes";
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.use("/usuarios", usuarioRoutes);
 router.use("/auth", authRoutes);
 router.use('/anexos', anexoRoutes);
 router.use('/parceiros', parceiroRoutes);
+router.use('/notificacoes', notificacaoRoutes);
+router.use('/push-subscriptions', pushSubscriptionRoutes);
 
 export { router };

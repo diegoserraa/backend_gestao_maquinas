@@ -9,6 +9,15 @@ from "../repositories/OrdemServicoRepository";
 import { ManutencaoPreventivaService }
 from "../services/ManutencaoPreventivaService";
 
+import { NotificacaoService }
+from "../services/NotificacaoService";
+
+import { UsuarioRepository }
+from "../repositories/UsuarioRepository";
+
+import { PushNotificationService }
+from "../services/PushNotificationService";
+
 
 const maquinaRepository =
     new MaquinaRepository();
@@ -17,12 +26,22 @@ const maquinaRepository =
 const ordemServicoRepository =
     new OrdemServicoRepository();
 
+const notificacaoService =
+    new NotificacaoService();
 
+const usuarioRepository =
+    new UsuarioRepository();
+
+const pushNotificationService =
+    new PushNotificationService();
 
 const service =
     new ManutencaoPreventivaService(
         maquinaRepository,
-        ordemServicoRepository
+        ordemServicoRepository,
+        notificacaoService,
+        usuarioRepository,
+        pushNotificationService
     );
 
 console.log(
@@ -30,7 +49,7 @@ console.log(
 );
 
 cron.schedule(
-     "05 2 * * *",
+     "00 20 * * *",
     async()=>{
 
         console.log(

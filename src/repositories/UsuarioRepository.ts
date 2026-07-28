@@ -88,4 +88,16 @@ export class UsuarioRepository {
 
     return rows;
 }
+async buscarGestoresETecnicos() {
+
+    const { rows } = await pool.query(
+        `
+        SELECT id
+        FROM usuarios
+        WHERE role IN ('GESTOR', 'TECNICO')
+        `
+    );
+
+    return rows;
+}
 }
