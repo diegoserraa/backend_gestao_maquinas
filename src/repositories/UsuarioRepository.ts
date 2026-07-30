@@ -92,7 +92,7 @@ async buscarGestoresETecnicos() {
 
     const { rows } = await pool.query(
         `
-        SELECT id
+        SELECT id, role
         FROM usuarios
         WHERE role IN ('GESTOR', 'TECNICO')
         `

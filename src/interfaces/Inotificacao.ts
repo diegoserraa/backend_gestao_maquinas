@@ -4,6 +4,7 @@ export interface INotificacao {
     titulo: string;
     mensagem: string;
     tipo: string;
+    url?: string;
     lida?: boolean;
     created_at?: Date;
 }

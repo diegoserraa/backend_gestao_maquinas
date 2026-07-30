@@ -6,7 +6,7 @@ export class NotificacaoRepository {
     async criar(
         notificacao: INotificacao
     ): Promise<INotificacao> {
-
+        console.log("notificacao", notificacao);
         const { rows } = await pool.query(
             `
             INSERT INTO notificacoes
@@ -14,10 +14,11 @@ export class NotificacaoRepository {
                 usuario_id,
                 titulo,
                 mensagem,
-                tipo
+                tipo,
+                url
             )
             VALUES
-            ($1,$2,$3,$4)
+            ($1,$2,$3,$4,$5)
 
             RETURNING *
             `,
@@ -25,7 +26,8 @@ export class NotificacaoRepository {
                 notificacao.usuario_id,
                 notificacao.titulo,
                 notificacao.mensagem,
-                notificacao.tipo
+                notificacao.tipo,
+                notificacao.url 
             ]
         );
 

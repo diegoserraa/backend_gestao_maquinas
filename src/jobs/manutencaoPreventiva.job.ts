@@ -1,55 +1,56 @@
 import cron from "node-cron";
 
-import { MaquinaRepository } 
-from "../repositories/MaquinaRepository";
+import { MaquinaRepository } from "../repositories/MaquinaRepository";
+import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
+import { UsuarioRepository } from "../repositories/UsuarioRepository";
 
-import { OrdemServicoRepository }
-from "../repositories/OrdemServicoRepository";
+import { ManutencaoPreventivaService } from "../services/ManutencaoPreventivaService";
+import { NotificacaoSistemaService } from "../services/notificacaoSistemaService";
 
-import { ManutencaoPreventivaService }
-from "../services/ManutencaoPreventivaService";
-
-import { NotificacaoService }
-from "../services/NotificacaoService";
-
-import { UsuarioRepository }
-from "../repositories/UsuarioRepository";
-
-import { PushNotificationService }
-from "../services/PushNotificationService";
+import { NotificacaoService } from "../services/NotificacaoService";
+import { PushNotificationService } from "../services/PushNotificationService";
 
 
 const maquinaRepository =
     new MaquinaRepository();
 
-
 const ordemServicoRepository =
     new OrdemServicoRepository();
-
-const notificacaoService =
-    new NotificacaoService();
 
 const usuarioRepository =
     new UsuarioRepository();
 
+
+const notificacaoService =
+    new NotificacaoService();
+
 const pushNotificationService =
     new PushNotificationService();
+
+
+const notificacaoSistemaService =
+    new NotificacaoSistemaService(
+        notificacaoService,
+        pushNotificationService
+    );
+
 
 const service =
     new ManutencaoPreventivaService(
         maquinaRepository,
         ordemServicoRepository,
-        notificacaoService,
         usuarioRepository,
-        pushNotificationService
+        notificacaoSistemaService
     );
 
+
 console.log(
-    "Job de manutenção preventiva carregado"
+    "🚀 Job de manutenção preventiva carregado"
 );
 
+
 cron.schedule(
-     "05 21 * * *",
+    "08 15 * * *",
     async()=>{
 
         console.log(
@@ -57,17 +58,13 @@ cron.schedule(
             new Date()
         );
 
-
         try{
 
             await service.gerarOrdensPreventivas();
 
-
             console.log(
                 "✅ Ordens preventivas geradas!"
             );
-     
-
 
         }catch(error){
 
@@ -77,10 +74,9 @@ cron.schedule(
             );
 
         }
-       
-    },
-     {
-            timezone: "America/Sao_Paulo"
-     }
 
+    },
+    {
+        timezone:"America/Sao_Paulo"
+    }
 );
