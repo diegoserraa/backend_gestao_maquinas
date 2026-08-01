@@ -22,7 +22,7 @@ dashboardRoutes.get(
 
 dashboardRoutes.get(
     "/gestor/tempo-medio-resolucao",
-    dashboardController.obterTempoMedioResolucao
+    dashboardController.tempoMedioResolucao
 );
 
 dashboardRoutes.get(
@@ -31,8 +31,8 @@ dashboardRoutes.get(
 );
 
 dashboardRoutes.get(
-    "/gestor/tipos-manutencao",
-    dashboardController.tiposManutencao
+    "/gestor/preventivas-vencidas",
+    dashboardController.preventivasVencidas
 );
 
 dashboardRoutes.get(

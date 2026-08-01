@@ -24,7 +24,7 @@ GET http://localhost:3000/dashboard/gestor/maquinas-paradas
 
 
 ### Tipos de manutenção
-GET http://localhost:3000/dashboard/gestor/tipos-manutencao
+GET http://localhost:3000/dashboard/gestor/preventivas-vencidas
 
 
 
@@ -143,7 +143,7 @@ GET http://localhost:3000/dashboard/operador/1/minhas-os
 
 
 ### KPIs
-GET http://localhost:3000/dashboard/gestor/kpis?dataInicio=2026-06-01&dataFim=2026-06-30
+GET http://localhost:3000/dashboard/gestor/kpis?dataInicio=2026-07-01&dataFim=2026-07-31
 
 
 ### Evolução OS
@@ -157,7 +157,7 @@ GET http://localhost:3000/dashboard/gestor/tempo-medio-resolucao?dataInicio=2026
 GET http://localhost:3000/dashboard/gestor/maquinas-paradas?dataInicio=2026-06-01&dataFim=2026-06-30
 
 ### Tipos de manutenção
-GET http://localhost:3000/dashboard/gestor/tipos-manutencao?dataInicio=2026-06-01&dataFim=2026-06-30
+GET http://localhost:3000/dashboard/gestor/preventivas-vencidas?dataInicio=2026-04-01&dataFim=2026-06-30
 
 ### Ranking técnicos
 GET http://localhost:3000/dashboard/gestor/ranking-tecnicos?dataInicio=2026-06-01&dataFim=2026-06-30

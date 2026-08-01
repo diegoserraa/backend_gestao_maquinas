@@ -82,7 +82,7 @@ export class DashboardController {
 
 
 
-    obterTempoMedioResolucao = async (
+    tempoMedioResolucao = async (
         req: Request,
         res: Response
     ) => {
@@ -155,7 +155,7 @@ export class DashboardController {
 
 
 
-    tiposManutencao = async (
+    preventivasVencidas = async (
         req: Request,
         res: Response
     ) => {
@@ -168,7 +168,7 @@ export class DashboardController {
 
 
             const dados =
-                await this.service.obterTiposManutencao(
+                await this.service.obterPreventivasVencidas(
                     dataInicio as string,
                     dataFim as string
                 );

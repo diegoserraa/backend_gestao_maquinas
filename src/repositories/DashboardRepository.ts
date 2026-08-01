@@ -114,7 +114,11 @@ export class DashboardRepository {
 
             COUNT(*) FILTER(
                 WHERE os.tipo_manutencao='PREVENTIVA'
-            ) AS preventivas
+            ) AS preventivas,
+
+             COUNT(*) FILTER(
+                WHERE os.tipo_manutencao='CORRETIVA'
+            ) AS corretivas
 
 
             FROM ordens_servico os
@@ -387,55 +391,76 @@ private formatarTempo(segundos: number) {
 
 
 
+async obterPreventivasVencidas(
+    dataInicio?: string,
+    dataFim?: string
+) {
 
-    async obterTiposManutencao(
-        dataInicio?:string,
-        dataFim?:string
-    ){
+    const filtro =
+        this.montarFiltroPeriodo(
+            dataInicio,
+            dataFim
+        );
 
+    const wherePeriodo =
+        filtro.where.replaceAll(
+            "os.data_abertura",
+            "m.proxima_manutencao"
+        );
 
-        const filtro =
-            this.montarFiltroPeriodo(
-                dataInicio,
-                dataFim
-            );
+    const { rows } = await pool.query(
 
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
+        `
         SELECT
+            m.id AS maquina_id,
+            m.nome,
+            m.proxima_manutencao,
 
-        os.tipo_manutencao,
-        COUNT(*) total
+            (
+                CURRENT_DATE -
+                m.proxima_manutencao
+            )::integer AS dias_atraso
 
+        FROM maquinas m
 
-        FROM ordens_servico os
+        WHERE
+            m.proxima_manutencao IS NOT NULL
 
+            AND m.proxima_manutencao < CURRENT_DATE
 
-        WHERE 1=1
+            ${wherePeriodo}
 
-        ${filtro.where}
+            AND NOT EXISTS (
 
+                SELECT 1
+                FROM ordens_servico os
 
-        GROUP BY os.tipo_manutencao
+                WHERE
+                    os.maquina_id = m.id
+                    AND os.tipo_manutencao = 'PREVENTIVA'
+                    AND os.status IN (
+                        'ABERTA',
+                        'ATRIBUIDA',
+                        'EM_ANDAMENTO'
+                    )
 
+            )
 
-
+        ORDER BY
+            dias_atraso DESC,
+            m.nome ASC
         `,
-        filtro.valores);
+        filtro.valores
+    );
 
+    return {
+        resumo: {
+            total: rows.length,
+        },
 
-
-        return rows;
-
-
-    }
-
-
+        maquinas: rows,
+    };
+}
 
 
 
@@ -478,7 +503,7 @@ private formatarTempo(segundos: number) {
 
 
 
-        WHERE os.status='FINALIZADA'
+        WHERE os.status='FINALIZADA' and os.id_tecnico <> 7
 
 
         ${filtro.where}

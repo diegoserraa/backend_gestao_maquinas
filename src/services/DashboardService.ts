@@ -88,13 +88,13 @@ export class DashboardService {
 
 
 
-    async obterTiposManutencao(
+    async obterPreventivasVencidas(
         dataInicio?: string,
         dataFim?: string
     ) {
 
 
-        return this.repository.obterTiposManutencao(
+        return this.repository.obterPreventivasVencidas(
             dataInicio,
             dataFim
         );
