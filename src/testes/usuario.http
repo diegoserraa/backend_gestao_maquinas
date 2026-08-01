@@ -53,3 +53,7 @@ PATCH http://localhost:3000/usuarios/5/toggle-status
 ###
 
 GET http://localhost:3000/usuarios/tecnicos
+
+###
+
+GET http://localhost:3000/dashboard/gestor

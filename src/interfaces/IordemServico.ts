@@ -10,6 +10,10 @@ export interface IOrdemServico {
   prioridade?: string;
   id_tecnico?: number;
   valor_gasto?: number;
+  id_parceiro?: number | null;
+
+  valor_parceiro?: number | null;
+
 
   // novas colunas
   id_solicitante?: number;

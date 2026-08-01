@@ -143,11 +143,13 @@ export class OrdemServicoController {
   };
 
 
-  finalizar = async (req: Request, res: Response) => {
+finalizar = async (req: Request, res: Response) => {
 
     const {
       resolucao,
-      valor_gasto
+      valor_gasto,
+      id_parceiro,
+      valor_parceiro
     } = req.body;
 
 
@@ -155,13 +157,15 @@ export class OrdemServicoController {
       await this.service.finalizar(
         Number(req.params.id),
         resolucao,
-        valor_gasto
+        valor_gasto,
+        id_parceiro,
+        valor_parceiro
       );
 
 
     return res.json(os);
 
-  };
+}; 
 
 
   cancelar = async (req: Request, res: Response) => {

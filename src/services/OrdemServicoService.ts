@@ -240,7 +240,9 @@ async criar(dados:IOrdemServico) {
 async finalizar(
   id:number,
   resolucao:string,
-  valor_gasto?:number
+  valor_gasto?:number,
+  id_parceiro?:number,
+  valor_parceiro?:number
 ){
 
   const os =
@@ -264,12 +266,14 @@ async finalizar(
   }
 
   const finalizada =
-    await this.repo.patch(id,{
-      status:"FINALIZADA",
-      resolucao,
-      valor_gasto:valor_gasto ?? 0,
-      data_resolucao:new Date().toISOString()
-    });
+  await this.repo.patch(id,{
+    status:"FINALIZADA",
+    resolucao,
+    valor_gasto:valor_gasto ?? 0,
+    id_parceiro: id_parceiro ?? null,
+    valor_parceiro: valor_parceiro ?? 0,
+    data_resolucao:new Date().toISOString()
+  });
 
   if(finalizada){
 

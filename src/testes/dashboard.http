@@ -1,0 +1,166 @@
+### =========================
+### GESTOR
+### =========================
+
+
+### KPIs
+GET http://localhost:3000/dashboard/gestor/kpis
+
+
+
+### Evolução OS
+GET http://localhost:3000/dashboard/gestor/evolucao
+
+
+
+### Disponibilidade
+GET http://localhost:3000/dashboard/gestor/disponibilidade
+
+
+
+### Máquinas mais paradas
+GET http://localhost:3000/dashboard/gestor/maquinas-paradas
+
+
+
+### Tipos de manutenção
+GET http://localhost:3000/dashboard/gestor/tipos-manutencao
+
+
+
+### Ranking técnicos
+GET http://localhost:3000/dashboard/gestor/ranking-tecnicos
+
+
+
+### Custos
+GET http://localhost:3000/dashboard/gestor/custos
+
+
+
+### Alertas
+GET http://localhost:3000/dashboard/gestor/alertas
+
+
+
+
+
+
+### =========================
+### GESTOR COM FILTRO DE DATA
+### =========================
+
+
+### KPIs período
+GET http://localhost:3000/dashboard/gestor/kpis?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+### Evolução período
+GET http://localhost:3000/dashboard/gestor/evolucao?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+### Máquinas paradas período
+GET http://localhost:3000/dashboard/gestor/maquinas-paradas?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+### Tipos manutenção período
+GET http://localhost:3000/dashboard/gestor/tipos-manutencao?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+### Ranking período
+GET http://localhost:3000/dashboard/gestor/ranking-tecnicos?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+### Custos período
+GET http://localhost:3000/dashboard/gestor/custos?dataInicio=2026-01-01&dataFim=2026-12-31
+
+
+
+
+
+
+### =========================
+### TECNICO
+### =========================
+
+
+### Resumo técnico
+GET http://localhost:3000/dashboard/tecnico/1/resumo
+
+
+
+### OS abertas técnico
+GET http://localhost:3000/dashboard/tecnico/1/os-abertas
+
+
+
+### OS em andamento técnico
+GET http://localhost:3000/dashboard/tecnico/1/os-andamento
+
+
+
+### OS finalizadas técnico
+GET http://localhost:3000/dashboard/tecnico/1/os-finalizadas
+
+
+
+
+
+
+### =========================
+### OPERADOR
+### =========================
+
+
+### Resumo operador
+GET http://localhost:3000/dashboard/operador/1/resumo
+
+
+
+### Minhas OS operador
+GET http://localhost:3000/dashboard/operador/1/minhas-os
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### KPIs
+GET http://localhost:3000/dashboard/gestor/kpis?dataInicio=2026-06-01&dataFim=2026-06-30
+
+
+### Evolução OS
+GET http://localhost:3000/dashboard/gestor/evolucao?dataInicio=2026-06-01&dataFim=2026-06-30
+
+### Disponibilidade
+GET http://localhost:3000/dashboard/gestor/tempo-medio-resolucao?dataInicio=2026-07-01&dataFim=2026-07-30
+### falta resolver esse pois tras os mesmos dados mesmo trocando o mes
+
+### Máquinas mais paradas
+GET http://localhost:3000/dashboard/gestor/maquinas-paradas?dataInicio=2026-06-01&dataFim=2026-06-30
+
+### Tipos de manutenção
+GET http://localhost:3000/dashboard/gestor/tipos-manutencao?dataInicio=2026-06-01&dataFim=2026-06-30
+
+### Ranking técnicos
+GET http://localhost:3000/dashboard/gestor/ranking-tecnicos?dataInicio=2026-06-01&dataFim=2026-06-30
+
+### Custos
+GET http://localhost:3000/dashboard/gestor/custos?dataInicio=2026-06-01&dataFim=2026-06-30

@@ -9,6 +9,7 @@ import { anexoRoutes } from "./anexo.routes";
 import { parceiroRoutes } from "./parceiro.routes";
 import { notificacaoRoutes } from "./notificacao.routes";
 import { pushSubscriptionRoutes } from "./pushSubscription.routes";
+import { dashboardRoutes } from "./dashboard.routes";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/anexos', anexoRoutes);
 router.use('/parceiros', parceiroRoutes);
 router.use('/notificacoes', notificacaoRoutes);
 router.use('/push-subscriptions', pushSubscriptionRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 export { router };
