@@ -68,76 +68,60 @@ export class DashboardRepository {
 
 
     async obterKPIs(
-        dataInicio?:string,
-        dataFim?:string
-    ){
+    dataInicio?: string,
+    dataFim?: string
+) {
 
+    const filtro =
+        this.montarFiltroPeriodo(
+            dataInicio,
+            dataFim
+        );
 
+    const { rows } =
+        await pool.query(
 
-        const filtro =
-            this.montarFiltroPeriodo(
-                dataInicio,
-                dataFim
-            );
-
-
-
-        const {rows} =
-            await pool.query(`
-
+            `
 
             SELECT
 
             COUNT(*) FILTER(
-                WHERE os.status='ABERTA'
+                WHERE os.status = 'ABERTA'
             ) AS os_abertas,
 
+            COUNT(*) FILTER(
+                WHERE os.status = 'ATRIBUIDA'
+            ) AS os_atribuidas,
 
             COUNT(*) FILTER(
-                WHERE os.status='EM_ANDAMENTO'
+                WHERE os.status = 'EM_ANDAMENTO'
             ) AS os_andamento,
 
-
             COUNT(*) FILTER(
-                WHERE os.prioridade='CRITICA'
-                AND os.status NOT IN(
-                    'FINALIZADA',
-                    'CANCELADA'
-                )
-            ) AS os_criticas,
-
-
-            COUNT(*) FILTER(
-                WHERE os.status='FINALIZADA'
+                WHERE os.status = 'FINALIZADA'
             ) AS os_finalizadas,
 
-
             COUNT(*) FILTER(
-                WHERE os.tipo_manutencao='PREVENTIVA'
+                WHERE os.tipo_manutencao = 'PREVENTIVA'
             ) AS preventivas,
 
-             COUNT(*) FILTER(
-                WHERE os.tipo_manutencao='CORRETIVA'
+            COUNT(*) FILTER(
+                WHERE os.tipo_manutencao = 'CORRETIVA'
             ) AS corretivas
-
 
             FROM ordens_servico os
 
-            WHERE 1=1
+            WHERE os.status <> 'CANCELADA'
 
             ${filtro.where}
-
 
             `,
             filtro.valores
         );
 
+    return rows[0];
 
-
-        return rows[0];
-
-
-    }
+}
 
 
 
