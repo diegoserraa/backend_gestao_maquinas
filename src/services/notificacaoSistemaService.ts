@@ -74,7 +74,7 @@ async notificarOSCriada(
     gestores_ids: number[],
     tecnicos_ids: number[],
     maquina_nome: string,
-    maquina_id: number
+    ordem_id: number
 ): Promise<void> {
 
     const mensagem =
@@ -87,7 +87,7 @@ async notificarOSCriada(
             "Nova ordem de serviço",
             mensagem,
             "OS_CRIADA",
-            `/machines/${maquina_id}`
+            `/ordens-servico/${ordem_id}`
         );
 
     }
@@ -99,7 +99,7 @@ async notificarOSCriada(
             "Nova manutenção disponível",
             mensagem,
             "OS_DISPONIVEL",
-            `/machines/${maquina_id}`
+            `/ordens-servico/${ordem_id}`
         );
 
     }

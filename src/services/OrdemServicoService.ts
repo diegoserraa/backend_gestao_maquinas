@@ -136,7 +136,7 @@ async criar(dados:IOrdemServico) {
       gestoresIds,
       tecnicosIds,
       nomeMaquina,
-      ordem.maquina_id
+      ordem.id || 0
     );
 
     console.log(
@@ -206,7 +206,7 @@ async criar(dados:IOrdemServico) {
   await this.notificacaoSistemaService.notificarOSTecnicoAtribuida(
     id_tecnico,
     nomeMaquina,
-    os.maquina_id
+    os.id || 0
   );
 
 }
@@ -323,7 +323,7 @@ async finalizar(
   "Manutenção finalizada",
   `${nomeMaquina} teve sua manutenção concluída.`,
   "OS_FINALIZADA",
-  `/machines/${os.maquina_id}`
+  `/ordens-servico/${os.id || 0}`
 );
 
       console.log(

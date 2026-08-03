@@ -70,14 +70,14 @@ export class ManutencaoPreventivaService {
                     await this.usuarioRepository
                     .buscarGestoresETecnicos();
 
-                for(const usuario of usuarios){
+                for(const usuario of usuarios){ 
                     try {
                         await this.notificacaoSistemaService.notificar(
                             usuario.id,
                             "Nova manutenção preventiva",
                             `A máquina ${maquina.nome} possui uma nova OS preventiva criada automaticamente.`,
                             "PREVENTIVA",
-                            `/machines/${maquina.id}`
+                            `/ordens-servico/${ordem.id}`
 
                         );
                         console.log(
