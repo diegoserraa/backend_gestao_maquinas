@@ -238,12 +238,12 @@ async criar(dados:IOrdemServico) {
 
   // Técnico finaliza OS
 async finalizar(
-  id:number,
-  resolucao:string,
-  valor_gasto?:number,
-  id_parceiro?:number,
-  valor_parceiro?:number
-){
+  id: number,
+  resolucao: string,
+  valor_gasto?: number,
+  id_parceiro?: number,
+  valor_parceiro?: number
+) {
 
   const os =
     await this.buscarOuFalhar(id);
@@ -253,34 +253,68 @@ async finalizar(
     "FINALIZADA"
   );
 
-  if(!resolucao?.trim()){
+  if (!resolucao?.trim()) {
     throw new Error(
       "Resolução é obrigatória para finalizar"
     );
   }
 
-  if((valor_gasto ?? 0) < 0){
+  if ((valor_gasto ?? 0) < 0) {
     throw new Error(
       "Valor gasto não pode ser negativo"
     );
   }
 
-  const finalizada =
-  await this.repo.patch(id,{
-    status:"FINALIZADA",
-    resolucao,
-    valor_gasto:valor_gasto ?? 0,
-    id_parceiro: id_parceiro ?? null,
-    valor_parceiro: valor_parceiro ?? 0,
-    data_resolucao:new Date().toISOString()
-  });
+  const dataResolucao = new Date();
 
-  if(finalizada){
+  const finalizada =
+    await this.repo.patch(id, {
+      status: "FINALIZADA",
+      resolucao,
+      valor_gasto: valor_gasto ?? 0,
+      id_parceiro: id_parceiro ?? null,
+      valor_parceiro: valor_parceiro ?? 0,
+      data_resolucao: dataResolucao.toISOString()
+    });
+
+  if (finalizada) {
 
     const maquina =
       await this.maquinaRepository.buscarPorId(
         os.maquina_id
       );
+
+    // ==========================
+    // PREVENTIVA FINALIZADA
+    // ==========================
+    if (
+      os.tipo_manutencao === "PREVENTIVA" &&
+      maquina
+    ) {
+      const hoje = new Date();
+      const proximaManutencao =
+        new Date(dataResolucao);
+
+      proximaManutencao.setDate(
+        proximaManutencao.getDate() +
+        maquina.intervalo_manutencao_dias
+      );
+
+      await this.maquinaRepository.registrarPreventiva(
+  maquina.id!,
+  hoje,
+  proximaManutencao
+);
+
+      console.log(
+        "🔄 Datas de manutenção atualizadas",
+        {
+          maquina: maquina.nome,
+          ultima: dataResolucao,
+          proxima: proximaManutencao
+        }
+      );
+    }
 
     const nomeMaquina =
       maquina?.nome ??
@@ -289,23 +323,23 @@ async finalizar(
     console.log(
       "🏁 OS finalizada",
       {
-        osId:id,
-        solicitante:os.id_solicitante,
-        atribuidoPor:os.id_atribuido_por,
-        maquina:nomeMaquina
+        osId: id,
+        solicitante: os.id_solicitante,
+        atribuidoPor: os.id_atribuido_por,
+        maquina: nomeMaquina
       }
     );
 
     const destinatarios =
       new Set<number>();
 
-    if(os.id_solicitante){
+    if (os.id_solicitante) {
       destinatarios.add(
         os.id_solicitante
       );
     }
 
-    if(os.id_atribuido_por){
+    if (os.id_atribuido_por) {
       destinatarios.add(
         os.id_atribuido_por
       );
@@ -316,27 +350,24 @@ async finalizar(
       [...destinatarios]
     );
 
-    for(const usuarioId of destinatarios){
+    for (const usuarioId of destinatarios) {
 
       await this.notificacaoSistemaService.notificar(
-  usuarioId,
-  "Manutenção finalizada",
-  `${nomeMaquina} teve sua manutenção concluída.`,
-  "OS_FINALIZADA",
-  `/ordens-servico/${os.id || 0}`
-);
+        usuarioId,
+        "Manutenção finalizada",
+        `${nomeMaquina} teve sua manutenção concluída.`,
+        "OS_FINALIZADA",
+        `/ordens-servico/${os.id || 0}`
+      );
 
       console.log(
         "✅ Notificação enviada para:",
         usuarioId
       );
-
     }
-
   }
 
   return finalizada;
-
 }
 
   async cancelar(

@@ -124,6 +124,30 @@ export class MaquinaRepository {
 
         return rows[0] ?? null;
     }
+    async registrarPreventiva(
+    id: number,
+    ultimaManutencao: Date,
+    proximaManutencao: Date
+): Promise<IMaquina | null> {
+
+    const { rows } = await pool.query(
+        `
+        UPDATE maquinas
+        SET
+            ultima_manutencao = $1,
+            proxima_manutencao = $2
+        WHERE id = $3
+        RETURNING *
+        `,
+        [
+            ultimaManutencao,
+            proximaManutencao,
+            id
+        ]
+    );
+
+    return rows[0] ?? null;
+}
 
     async excluir(id: number): Promise<void> {
 
