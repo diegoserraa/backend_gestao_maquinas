@@ -170,68 +170,26 @@ export class DashboardService {
 
 
 
-    async obterDashboardTecnico(
-        tecnicoId:number
-    ) {
+async obterDashboardTecnico(tecnicoId: number) {
+    const [
+        total,
+        abertas,
+        andamento,
+        finalizadas
+    ] = await Promise.all([
+        this.repository.obterTotalOSTecnico(tecnicoId),
+        this.repository.obterOSTecnicoAbertas(tecnicoId),
+        this.repository.obterOSAndamentoTecnico(tecnicoId),
+        this.repository.obterOSFinalizadasTecnico(tecnicoId)
+    ]);
 
-
-        const [
-            total,
-            abertas,
-            andamento,
-            finalizadas,
-            historico
-
-        ] = await Promise.all([
-
-
-            this.repository.obterTotalOSTecnico(
-                tecnicoId
-            ),
-
-
-
-            this.repository.obterOSTecnicoAbertas(
-                tecnicoId
-            ),
-
-
-
-            this.repository.obterAndamentoTecnico(
-                tecnicoId
-            ),
-
-
-
-            this.repository.obterFinalizadasTecnico(
-                tecnicoId
-            ),
-
-
-
-            this.repository.obterHistoricoTecnico(
-                tecnicoId
-            )
-
-
-
-        ]);
-
-
-
-
-        return {
-
-            total,
-            abertas,
-            andamento,
-            finalizadas,
-            historico
-
-        };
-
-
-    }
+    return {
+        total: Number(total.total),
+        abertas: Number(abertas.total),
+        andamento: Number(andamento.total),
+        finalizadas: Number(finalizadas.total)
+    };
+}
 
 
 
@@ -264,7 +222,7 @@ export class DashboardService {
     ) {
 
 
-        return this.repository.obterAndamentoTecnico(
+        return this.repository.obterOSAndamentoTecnico(
             tecnicoId
         );
 
@@ -282,7 +240,7 @@ export class DashboardService {
     ) {
 
 
-        return this.repository.obterFinalizadasTecnico(
+        return this.repository.obterOSFinalizadasTecnico(
             tecnicoId
         );
 
@@ -307,54 +265,23 @@ export class DashboardService {
 
 
 
-    async obterDashboardOperador(
-        operadorId:number
-    ) {
+   async obterDashboardOperador(operadorId: number) {
+    const [
+        abertas,
+        andamento,
+        finalizadas
+    ] = await Promise.all([
+        this.repository.obterOSAbertasOperador(operadorId),
+        this.repository.obterOSAndamentoOperador(operadorId),
+        this.repository.obterOSFinalizadasOperador(operadorId)
+    ]);
 
-
-
-        const [
-            abertas,
-            finalizadas,
-            historico
-
-        ] = await Promise.all([
-
-
-            this.repository.obterOSAbertasOperador(
-                operadorId
-            ),
-
-
-
-            this.repository.obterOSFinalizadasOperador(
-                operadorId
-            ),
-
-
-
-            this.repository.obterHistoricoOperador(
-                operadorId
-            )
-
-
-
-        ]);
-
-
-
-
-
-        return {
-
-            abertas,
-            finalizadas,
-            historico
-
-        };
-
-
-    }
+    return {
+        abertas: Number(abertas.total),
+        andamento: Number(andamento.total),
+        finalizadas: Number(finalizadas.total)
+    };
+}
 
 
 

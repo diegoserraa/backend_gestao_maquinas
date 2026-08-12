@@ -90,22 +90,22 @@ GET http://localhost:3000/dashboard/gestor/custos?dataInicio=2026-01-01&dataFim=
 
 
 ### Resumo técnico
-GET http://localhost:3000/dashboard/tecnico/1/resumo
+GET http://localhost:3000/dashboard/tecnico/6/resumo
 
 
 
 ### OS abertas técnico
-GET http://localhost:3000/dashboard/tecnico/1/os-abertas
+GET http://localhost:3000/dashboard/tecnico/10/os-abertas
 
 
 
 ### OS em andamento técnico
-GET http://localhost:3000/dashboard/tecnico/1/os-andamento
+GET http://localhost:3000/dashboard/tecnico/10/os-andamento
 
 
 
 ### OS finalizadas técnico
-GET http://localhost:3000/dashboard/tecnico/1/os-finalizadas
+GET http://localhost:3000/dashboard/tecnico/10/os-finalizadas
 
 
 
@@ -118,12 +118,12 @@ GET http://localhost:3000/dashboard/tecnico/1/os-finalizadas
 
 
 ### Resumo operador
-GET http://localhost:3000/dashboard/operador/1/resumo
+GET http://localhost:3000/dashboard/operador/9/resumo
 
 
 
 ### Minhas OS operador
-GET http://localhost:3000/dashboard/operador/1/minhas-os
+GET http://localhost:3000/dashboard/operador/9/minhas-os
 
 
 

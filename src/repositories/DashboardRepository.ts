@@ -891,194 +891,131 @@ async obterCustos(
 
 
 
-    async obterTotalOSTecnico(
-        tecnicoId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
+   async obterTotalOSTecnico(tecnicoId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT COUNT(*) AS total
         FROM ordens_servico
-
-
-        WHERE id_tecnico=$1
-
-
+        WHERE id_tecnico = $1
         `,
-        [tecnicoId]);
+        [tecnicoId]
+    );
 
+    return rows[0];
+}
 
-
-        return rows[0];
-
-
-    }
-
-
-
-
-
-
-    async obterOSTecnicoAbertas(
-        tecnicoId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
-
-        FROM ordens_servico
-
-
-        WHERE id_tecnico=$1
-
-
-        AND status IN(
-            'ABERTA',
-            'ATRIBUIDA'
-        )
-
-
-
+async obterOSTecnicoAbertas(tecnicoId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT
+            os.id,
+            os.maquina_id,
+            m.nome AS maquina_nome,
+            os.descricao,
+            os.status,
+            os.tipo_manutencao,
+            os.prioridade,
+            os.data_abertura
+        FROM ordens_servico os
+        LEFT JOIN maquinas m ON m.id = os.maquina_id
+        WHERE os.id_tecnico = $1
+        AND os.status IN ('ABERTA', 'ATRIBUIDA')
+        ORDER BY os.data_abertura DESC
         `,
-        [tecnicoId]);
+        [tecnicoId]
+    );
 
+    return {
+        total: rows.length,
+        ordens: rows
+    };
+}
 
-
-        return rows[0];
-
-
-    }
-
-
-
-
-
-
-    async obterAndamentoTecnico(
-        tecnicoId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
-
-        FROM ordens_servico
-
-
-        WHERE id_tecnico=$1
-
-
-        AND status='EM_ANDAMENTO'
-
-
-
+async obterOSAndamentoTecnico(tecnicoId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT
+            os.id,
+            os.maquina_id,
+            m.nome AS maquina_nome,
+            os.descricao,
+            os.status,
+            os.tipo_manutencao,
+            os.prioridade,
+            os.data_abertura,
+            os.data_inicio_atendimento
+        FROM ordens_servico os
+        LEFT JOIN maquinas m ON m.id = os.maquina_id
+        WHERE os.id_tecnico = $1
+        AND os.status = 'EM_ANDAMENTO'
+        ORDER BY os.data_inicio_atendimento DESC
         `,
-        [tecnicoId]);
+        [tecnicoId]
+    );
 
+    return {
+        total: rows.length,
+        ordens: rows
+    };
+}
 
-
-        return rows[0];
-
-
-    }
-
-
-
-
-
-
-
-    async obterFinalizadasTecnico(
-        tecnicoId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
-
-        FROM ordens_servico
-
-
-        WHERE id_tecnico=$1
-
-
-        AND status='FINALIZADA'
-
-
-
-        `,
-        [tecnicoId]);
-
-
-
-        return rows[0];
-
-
-    }
-
-
-
-
-
-
-
-    async obterHistoricoTecnico(
-        tecnicoId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT *
-
-
-        FROM ordens_servico
-
-
-        WHERE id_tecnico=$1
-
-
-        ORDER BY data_abertura DESC
-
-
+async obterOSFinalizadasTecnico(tecnicoId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT
+            os.id,
+            os.maquina_id,
+            m.nome AS maquina_nome,
+            os.descricao,
+            os.status,
+            os.tipo_manutencao,
+            os.prioridade,
+            os.data_abertura,
+            os.data_resolucao,
+            os.resolucao,
+            os.valor_gasto
+        FROM ordens_servico os
+        LEFT JOIN maquinas m ON m.id = os.maquina_id
+        WHERE os.id_tecnico = $1
+        AND os.status = 'FINALIZADA'
+        ORDER BY os.data_resolucao DESC
         LIMIT 20
-
-
-
         `,
-        [tecnicoId]);
+        [tecnicoId]
+    );
 
+    return {
+        total: rows.length,
+        ordens: rows
+    };
+}
 
+async obterHistoricoTecnico(tecnicoId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT
+            os.id,
+            os.maquina_id,
+            m.nome AS maquina_nome,
+            os.descricao,
+            os.status,
+            os.tipo_manutencao,
+            os.prioridade,
+            os.data_abertura,
+            os.data_resolucao,
+            os.resolucao,
+            os.valor_gasto
+        FROM ordens_servico os
+        LEFT JOIN maquinas m ON m.id = os.maquina_id
+        WHERE os.id_tecnico = $1
+        ORDER BY os.data_abertura DESC
+        LIMIT 20
+        `,
+        [tecnicoId]
+    );
 
-        return rows;
-
-
-    }
-
+    return rows;
+}
 
 
 
@@ -1092,80 +1029,47 @@ async obterCustos(
 
 
 
-    async obterOSAbertasOperador(
-        operadorId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
-
+    async obterOSAbertasOperador(operadorId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT COUNT(*) AS total
         FROM ordens_servico
-
-
-        WHERE id_solicitante=$1
-
-
-        AND status IN(
-            'ABERTA',
-            'ATRIBUIDA',
-            'EM_ANDAMENTO'
-        )
-
-
-
+        WHERE id_solicitante = $1
+        AND status IN ('ABERTA', 'ATRIBUIDA')
         `,
-        [operadorId]);
+        [operadorId]
+    );
 
+    return rows[0];
+}
 
-
-        return rows[0];
-
-
-    }
-
-
-
-
-
-
-    async obterOSFinalizadasOperador(
-        operadorId:number
-    ){
-
-
-        const {rows}=
-
-        await pool.query(`
-
-
-        SELECT COUNT(*) total
-
-
+async obterOSAndamentoOperador(operadorId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT COUNT(*) AS total
         FROM ordens_servico
-
-
-        WHERE id_solicitante=$1
-
-
-        AND status='FINALIZADA'
-
-
-
+        WHERE id_solicitante = $1
+        AND status = 'EM_ANDAMENTO'
         `,
-        [operadorId]);
+        [operadorId]
+    );
 
+    return rows[0];
+}
 
+async obterOSFinalizadasOperador(operadorId: number) {
+    const { rows } = await pool.query(
+        `
+        SELECT COUNT(*) AS total
+        FROM ordens_servico
+        WHERE id_solicitante = $1
+        AND status = 'FINALIZADA'
+        `,
+        [operadorId]
+    );
 
-        return rows[0];
-
-
-    }
+    return rows[0];
+}
 
 
 
