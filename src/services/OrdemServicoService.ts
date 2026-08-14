@@ -62,6 +62,7 @@ async criar(dados:IOrdemServico) {
     await this.repo.criar({
       ...dados,
       status:"ABERTA",
+      data_abertura: new Date().toISOString(),
       tipo_manutencao:
         dados.tipo_manutencao ?? "CORRETIVA"
     });

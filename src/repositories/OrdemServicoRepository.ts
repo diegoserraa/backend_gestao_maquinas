@@ -19,30 +19,39 @@ export class OrdemServicoRepository {
   }
 
   async criar(os: IOrdemServico): Promise<IOrdemServico> {
-    const { rows } = await pool.query(
-      `
-      INSERT INTO ordens_servico (
-        maquina_id, descricao, status, tipo_manutencao,
-        resolucao, data_abertura, data_resolucao,
-        prioridade, id_tecnico, id_solicitante
-      )
-      VALUES ($1,$2,$3,$4,$5, NOW(), $6,$7,$8,$9)
-      RETURNING *
-      `,
-      [
-        os.maquina_id,
-        os.descricao,
-        os.status ?? "ABERTA",
-        os.tipo_manutencao,
-        os.resolucao ?? null,
-        os.data_resolucao ?? null,
-        os.prioridade,
-        os.id_tecnico ?? null,
-        os.id_solicitante ?? null,
-      ]
-    );
-    return rows[0];
-  }
+  const { rows } = await pool.query(
+    `
+    INSERT INTO ordens_servico (
+      maquina_id,
+      descricao,
+      status,
+      tipo_manutencao,
+      resolucao,
+      data_abertura,
+      data_resolucao,
+      prioridade,
+      id_tecnico,
+      id_solicitante
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    RETURNING *
+    `,
+    [
+      os.maquina_id,
+      os.descricao,
+      os.status ?? "ABERTA",
+      os.tipo_manutencao,
+      os.resolucao ?? null,
+      os.data_abertura, // <-- aqui
+      os.data_resolucao ?? null,
+      os.prioridade,
+      os.id_tecnico ?? null,
+      os.id_solicitante ?? null,
+    ]
+  );
+
+  return rows[0];
+}
 
   async atualizar(id: number, os: IOrdemServico): Promise<IOrdemServico | null> {
     const { rows } = await pool.query(
