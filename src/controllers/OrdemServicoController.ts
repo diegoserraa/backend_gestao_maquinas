@@ -99,6 +99,19 @@ export class OrdemServicoController {
 
   };
 
+indicadoresPorMaquina = async (
+  req: Request,
+  res: Response
+) => {
+
+  const indicadores =
+    await this.service.indicadoresPorMaquina(
+      Number(req.params.id)
+    );
+
+  return res.json(indicadores);
+
+};
 
   atribuir = async (req: Request, res: Response) => {
 

@@ -109,6 +109,7 @@ export class OrdemServicoRepository {
     );
     return rows[0] ?? null;
   }
+  
 
   async excluir(id: number): Promise<void> {
     await pool.query(`DELETE FROM ordens_servico WHERE id = $1`, [id]);
@@ -138,5 +139,126 @@ export class OrdemServicoRepository {
 
     return result.rows.length > 0;
 
+}
+async indicadoresPorMaquina(maquinaId: number) {
+  const { rows } = await pool.query(
+    `
+    WITH ordens_corretivas AS (
+      SELECT
+        id,
+        data_abertura,
+        data_inicio_atendimento,
+        data_resolucao,
+
+        LAG(data_resolucao) OVER (
+          ORDER BY data_abertura
+        ) AS resolucao_anterior
+
+      FROM ordens_servico
+
+      WHERE maquina_id = $1
+        AND tipo_manutencao = 'CORRETIVA'
+        AND status = 'FINALIZADA'
+        AND data_abertura IS NOT NULL
+        AND data_inicio_atendimento IS NOT NULL
+        AND data_resolucao IS NOT NULL
+        AND data_inicio_atendimento >= data_abertura
+        AND data_resolucao >= data_inicio_atendimento
+    )
+
+    SELECT
+
+      /* =========================
+         OS ABERTAS
+      ========================= */
+
+      (
+        SELECT COUNT(*)
+        FROM ordens_servico
+        WHERE maquina_id = $1
+          AND status = 'ABERTA'
+      ) AS os_abertas,
+
+
+      /* =========================
+         MTTR
+         Início do atendimento
+         → resolução
+      ========================= */
+
+      AVG(
+        EXTRACT(
+          EPOCH FROM (
+            data_resolucao - data_inicio_atendimento
+          )
+        )
+      ) AS mttr_segundos,
+
+
+      /* =========================
+         MTBF
+         Resolução da falha anterior
+         → abertura da próxima falha
+      ========================= */
+
+      AVG(
+        EXTRACT(
+          EPOCH FROM (
+            data_abertura - resolucao_anterior
+          )
+        )
+      ) FILTER (
+        WHERE resolucao_anterior IS NOT NULL
+          AND data_abertura >= resolucao_anterior
+      ) AS mtbf_segundos,
+
+
+      /* =========================
+         TEMPO MÉDIO DE ATENDIMENTO
+         Abertura
+         → início do atendimento
+      ========================= */
+
+      (
+        SELECT AVG(
+          EXTRACT(
+            EPOCH FROM (
+              data_inicio_atendimento - data_abertura
+            )
+          )
+        )
+        FROM ordens_servico
+        WHERE maquina_id = $1
+          AND data_inicio_atendimento IS NOT NULL
+          AND data_abertura IS NOT NULL
+          AND data_inicio_atendimento >= data_abertura
+      ) AS tempo_atendimento_segundos
+
+
+    FROM ordens_corretivas;
+    `,
+    [maquinaId]
+  );
+
+  const row = rows[0];
+
+  return {
+    osAbertas: Number(row.os_abertas),
+
+    mttrSegundos:
+      row.mttr_segundos !== null
+        ? Number(row.mttr_segundos)
+        : null,
+
+    mtbfSegundos:
+      row.mtbf_segundos !== null
+        ? Number(row.mtbf_segundos)
+        : null,
+
+    tempoAtendimentoSegundos:
+      row.tempo_atendimento_segundos !== null
+        ? Number(row.tempo_atendimento_segundos)
+        : null,
+  };
 }
 }

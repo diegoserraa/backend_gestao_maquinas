@@ -11,6 +11,9 @@ ordemServicoRoutes.post("/",       controller.criar);
 ordemServicoRoutes.put("/:id",     controller.atualizar);
 ordemServicoRoutes.delete("/:id",  controller.excluir);
 
+//kpis machinedetails
+ordemServicoRoutes.get("/maquina/:id/indicadores", controller.indicadoresPorMaquina);
+
 // ─── Transições de ciclo de vida ──────────────────────────────
 // Técnico se auto-atribui ou gestor atribui a um técnico
 ordemServicoRoutes.patch("/:id/atribuir",   controller.atribuir);

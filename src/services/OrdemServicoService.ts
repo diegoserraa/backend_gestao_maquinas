@@ -398,7 +398,11 @@ async finalizar(
     });
 
   }
-
+async indicadoresPorMaquina(
+  maquinaId: number
+) {
+  return this.repo.indicadoresPorMaquina(maquinaId);
+}
 
   async pausar(
     id:number,

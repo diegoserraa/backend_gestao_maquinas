@@ -6,6 +6,10 @@ Content-Type: application/json
 ### BUSCAR ORDEM DE SERVIÇO POR ID
 GET http://localhost:3000/ordens-servico/176
 Content-Type: application/json
+###
+
+GET http://localhost:3000/ordens-servico/maquina/118/indicadores
+Content-Type: application/json
 
 
 ### CRIAR ORDEM DE SERVIÇO

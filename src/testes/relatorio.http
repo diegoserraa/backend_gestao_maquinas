@@ -1,0 +1,87 @@
+# ============================================
+# RELATÓRIO 1 - ORDENS DE SERVIÇO
+# ============================================
+
+# Todas as ordens de serviço
+GET http://localhost:3000/relatorios/ordens-servico
+
+###
+# Por período
+GET http://localhost:3000/relatorios/ordens-servico?dataInicial=2026-08-10&dataFinal=2026-08-17
+
+###
+# Por máquina
+GET http://localhost:3000/relatorios/ordens-servico?maquinaId=118
+
+
+# Por setor
+GET http://localhost:3000/relatorios/ordens-servico?setorId=1
+
+
+# Por status
+GET http://localhost:3000/relatorios/ordens-servico?status=FINALIZADA
+
+
+# Por tipo de manutenção
+GET http://localhost:3000/relatorios/ordens-servico?tipoManutencao=CORRETIVA
+
+
+# Por prioridade
+GET http://localhost:3000/relatorios/ordens-servico?prioridade=ALTA
+
+
+###
+GET http://localhost:3000/relatorios/ordens-servico/preview?setorId=1
+
+###
+# Período + setor
+GET http://localhost:3000/relatorios/ordens-servico?setorId=1
+
+###
+# Período + máquina
+GET http://localhost:3000/relatorios/ordens-servico?dataInicial=2026-08-10&dataFinal=2026-08-17&maquinaId=118
+
+
+# Período + status
+GET http://localhost:3000/relatorios/ordens-servico?dataInicio=2026-01-01&dataFim=2026-08-17&status=FINALIZADA
+
+
+# Todos os filtros
+GET http://localhost:3000/relatorios/ordens-servico?dataInicio=2026-01-01&dataFim=2026-08-17&setorId=1&maquinaId=118&status=FINALIZADA&tipoManutencao=CORRETIVA&prioridade=ALTA
+
+
+
+# ============================================
+# RELATÓRIO 2 - MANUTENÇÃO / INDICADORES
+# ============================================
+###
+# Todas as máquinas
+GET http://localhost:3000/relatorios/manutencao
+###
+
+# Por período
+GET http://localhost:3000/relatorios/manutencao?dataInicial=2026-08-10&dataFinal=2026-08-17
+
+###
+# Por setor
+GET http://localhost:3000/relatorios/manutencao?setorId=1
+
+###
+# Por máquina
+GET http://localhost:3000/relatorios/manutencao?maquinaId=118
+
+
+# Período + setor
+GET http://localhost:3000/relatorios/manutencao?dataInicial=2026-08-10&dataFinal=2026-08-17&setorId=2
+
+
+# Período + máquina
+GET http://localhost:3000/relatorios/manutencao?dataInicio=2026-01-01&dataFim=2026-08-17&maquinaId=118
+
+
+# Setor + máquina
+GET http://localhost:3000/relatorios/manutencao?setorId=1&maquinaId=118
+
+
+# Período + setor + máquina
+GET http://localhost:3000/relatorios/manutencao?dataInicio=2026-01-01&dataFim=2026-08-17&setorId=1&maquinaId=118
