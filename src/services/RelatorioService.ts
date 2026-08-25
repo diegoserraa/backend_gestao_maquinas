@@ -293,29 +293,23 @@ export class RelatorioService {
 
           data_abertura:
             item.data_abertura
-              ? new Date(item.data_abertura)
+              ? this.formatarDataHora(item.data_abertura)
               : null,
-
 
           data_atribuicao:
             item.data_atribuicao
-              ? new Date(item.data_atribuicao)
+              ? this.formatarDataHora(item.data_atribuicao)
               : null,
-
 
           data_inicio_atendimento:
             item.data_inicio_atendimento
-              ? new Date(
-                  item.data_inicio_atendimento
-                )
+              ? this.formatarDataHora(item.data_inicio_atendimento)
               : null,
-
 
           data_resolucao:
             item.data_resolucao
-              ? new Date(item.data_resolucao)
+              ? this.formatarDataHora(item.data_resolucao)
               : null,
-
 
           resolucao:
             item.resolucao ?? "-",
@@ -333,31 +327,6 @@ export class RelatorioService {
             item.valor_parceiro ?? 0,
 
         });
-
-
-      row.getCell(
-        "data_abertura"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
-
-
-      row.getCell(
-        "data_atribuicao"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
-
-
-      row.getCell(
-        "data_inicio_atendimento"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
-
-
-      row.getCell(
-        "data_resolucao"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
-
 
       row.getCell(
         "valor_gasto"
@@ -733,8 +702,8 @@ export class RelatorioService {
             formatarTempo(
               item.mttr_segundos !== null
                 ? Number(
-                    item.mttr_segundos
-                  )
+                  item.mttr_segundos
+                )
                 : null
             ),
 
@@ -743,8 +712,8 @@ export class RelatorioService {
             formatarTempo(
               item.mtbf_segundos !== null
                 ? Number(
-                    item.mtbf_segundos
-                  )
+                  item.mtbf_segundos
+                )
                 : null
             ),
 
@@ -753,8 +722,8 @@ export class RelatorioService {
             formatarTempo(
               item.tempo_atendimento_segundos !== null
                 ? Number(
-                    item.tempo_atendimento_segundos
-                  )
+                  item.tempo_atendimento_segundos
+                )
                 : null
             ),
 
@@ -769,32 +738,14 @@ export class RelatorioService {
 
           ultima_os_abertura:
             item.ultima_os_abertura
-              ? new Date(
-                  item.ultima_os_abertura
-                )
-              : null,
-
+            ? this.formatarDataHora(item.ultima_os_abertura)
+            : null,
 
           ultima_manutencao:
             item.ultima_manutencao
-              ? new Date(
-                  item.ultima_manutencao
-                )
-              : null,
-
+            ? this.formatarDataHora(item.ultima_manutencao)
+            : null,
         });
-
-
-      row.getCell(
-        "ultima_os_abertura"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
-
-
-      row.getCell(
-        "ultima_manutencao"
-      ).numFmt =
-        "dd/mm/yyyy hh:mm";
 
 
       row.alignment = {
@@ -861,6 +812,29 @@ export class RelatorioService {
     return this.repository.historicoOrdensServico(
       filtros
     );
+
+  }
+
+  private formatarDataHora(
+    data: Date | string | null | undefined
+  ): string {
+
+    if (!data) {
+      return "-";
+    }
+
+    return new Intl.DateTimeFormat(
+      "pt-BR",
+      {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }
+    ).format(new Date(data));
 
   }
 

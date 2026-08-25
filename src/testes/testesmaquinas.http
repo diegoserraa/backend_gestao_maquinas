@@ -31,7 +31,7 @@ Content-Type: application/json
     "modelo": "TC-500",
     "fabricante": "Romi",
     "ano": 2024,
-    "local": "Produção",
+    "setor_id": 1,
     "status": "ATIVA",
     "intervalo_manutencao_dias": 30
 }
