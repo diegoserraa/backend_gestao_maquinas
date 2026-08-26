@@ -480,15 +480,15 @@ export class RelatorioRepository {
                MTTR
             ========================= */
 
-            AVG(
-              EXTRACT(
-                EPOCH FROM (
-                  os.data_resolucao
-                  -
-                  os.data_abertura
-                )
-              )
-            ) FILTER (
+           AVG(
+  EXTRACT(
+    EPOCH FROM (
+      os.data_resolucao
+      -
+      os.data_inicio_atendimento
+    )
+  )
+) FILTER (
 
               WHERE
 
