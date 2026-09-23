@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { lerPagina, responderPagina } from "../utils/paginacao";
 import { MaquinaService } from "../services/MaquinaService";
 
 export class MaquinaController {
@@ -10,10 +11,13 @@ export class MaquinaController {
         res: Response
     ) => {
 
-        const maquinas =
-            await this.service.listar(req.empresaId!);
+        const { itens, total } =
+            await this.service.listar(
+                req.empresaId!,
+                lerPagina(req, { padrao: 500, maximo: 1000 })
+            );
 
-        return res.json(maquinas);
+        return responderPagina(res, itens, total);
     };
 
     buscarPorId = async (

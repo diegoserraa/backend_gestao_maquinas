@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { NotificacaoService } from "../services/NotificacaoService";
 import { UsuarioRepository } from "../repositories/UsuarioRepository";
+import { lerPagina, responderPagina } from "../utils/paginacao";
 
 
 export class NotificacaoController {
@@ -22,13 +23,14 @@ export class NotificacaoController {
         const usuario_id = req.user!.id;
 
 
-        const notificacoes =
+        const { itens, total } =
             await this.service.listarPorUsuario(
-                usuario_id
+                usuario_id,
+                lerPagina(req, { padrao: 100, maximo: 200 })
             );
 
 
-        return res.json(notificacoes);
+        return responderPagina(res, itens, total);
 
     };
 
@@ -44,13 +46,14 @@ export class NotificacaoController {
         const usuario_id = req.user!.id;
 
 
-        const notificacoes =
+        const { itens, total } =
             await this.service.listarNaoLidas(
-                usuario_id
+                usuario_id,
+                lerPagina(req, { padrao: 100, maximo: 200 })
             );
 
 
-        return res.json(notificacoes);
+        return responderPagina(res, itens, total);
 
     };
 

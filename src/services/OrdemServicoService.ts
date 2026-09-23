@@ -4,6 +4,7 @@ import { NotificacaoSistemaService } from "./notificacaoSistemaService";
 import { IOrdemServico } from "../interfaces/IordemServico";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
 import { ParceiroRepository } from "../repositories/ParceiroRepository";
+import { Pagina } from "../utils/paginacao";
 import { logger } from "../config/logger";
 
 const log = logger.child({ modulo: "ordem-servico" });
@@ -60,8 +61,8 @@ export class OrdemServicoService {
 
   }
 
-  async listar(empresaId: string) {
-    return this.repo.listar(empresaId);
+  async listar(empresaId: string, pagina: Pagina) {
+    return this.repo.listar(empresaId, pagina);
   }
 
   async buscarPorId(id:number, empresaId: string) {

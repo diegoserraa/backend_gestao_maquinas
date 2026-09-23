@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { lerPagina, responderPagina } from "../utils/paginacao";
 
 import { OrdemServicoService } from "../services/OrdemServicoService";
 import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
@@ -42,10 +43,13 @@ export class OrdemServicoController {
 
   listar = async (req: Request, res: Response) => {
 
-    const osList =
-      await this.service.listar(req.empresaId!);
+    const { itens, total } =
+      await this.service.listar(
+        req.empresaId!,
+        lerPagina(req, { padrao: 500, maximo: 1000 })
+      );
 
-    return res.json(osList);
+    return responderPagina(res, itens, total);
 
   };
 
@@ -65,9 +69,20 @@ export class OrdemServicoController {
 
   criar = async (req: Request, res: Response) => {
 
+    const { id, role } = req.user!;
+    const ehGestor = role === "ADMIN" || role === "GESTOR";
+
+    // solicitante é sempre quem está logado; escolher técnico já na abertura
+    // é do gestor (operador/técnico abrem a O.S. e o gestor atribui depois)
+    const dados = {
+      ...req.body,
+      id_solicitante: id,
+      id_tecnico: ehGestor ? req.body.id_tecnico : undefined
+    };
+
     const os =
       await this.service.criar(
-        req.body,
+        dados,
         req.empresaId!
       );
 

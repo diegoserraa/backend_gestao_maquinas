@@ -1,5 +1,6 @@
 import { NotificacaoRepository } from "../repositories/NotificacaoRepository";
 import { INotificacao } from "../interfaces/Inotificacao";
+import { Pagina } from "../utils/paginacao";
 
 
 export class NotificacaoService {
@@ -23,11 +24,13 @@ export class NotificacaoService {
 
 
     async listarPorUsuario(
-        usuario_id:number
+        usuario_id:number,
+        pagina:Pagina
     ){
 
         return this.repository.listarPorUsuario(
-            usuario_id
+            usuario_id,
+            pagina
         );
 
     }
@@ -35,11 +38,13 @@ export class NotificacaoService {
 
 
     async listarNaoLidas(
-        usuario_id:number
+        usuario_id:number,
+        pagina:Pagina
     ){
 
         return this.repository.listarNaoLidas(
-            usuario_id
+            usuario_id,
+            pagina
         );
 
     }

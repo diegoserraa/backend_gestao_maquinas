@@ -22,6 +22,12 @@ export interface Lado {
   adminEmail: string;
   tokenAdmin: string;
   tokenTecnico: string;
+  gestorId: number;
+  tokenGestor: string;
+  operadorId: number;
+  tokenOperador: string;
+  tecnico2Id: number;
+  tokenTecnico2: string;
   marcador: string;
 }
 
@@ -73,6 +79,9 @@ async function criarLado(letra: "A" | "B", hash: string): Promise<Lado> {
 
   const admin = await insUser("admin", "ADMIN");
   const tecnico = await insUser("tecnico", "TECNICO");
+  const tecnico2 = await insUser("tecnico2", "TECNICO");
+  const gestor = await insUser("gestor", "GESTOR");
+  const operador = await insUser("operador", "OPERADOR");
 
   const setor = await pool.query(
     `INSERT INTO setores (nome, descricao, empresa_id) VALUES ($1,$2,$3) RETURNING id`,
@@ -121,6 +130,12 @@ async function criarLado(letra: "A" | "B", hash: string): Promise<Lado> {
     adminEmail: admin.email,
     tokenAdmin: token(admin.id, "ADMIN", empresaId),
     tokenTecnico: token(tecnico.id, "TECNICO", empresaId),
+    gestorId: gestor.id,
+    tokenGestor: token(gestor.id, "GESTOR", empresaId),
+    operadorId: operador.id,
+    tokenOperador: token(operador.id, "OPERADOR", empresaId),
+    tecnico2Id: tecnico2.id,
+    tokenTecnico2: token(tecnico2.id, "TECNICO", empresaId),
     marcador,
   };
 }

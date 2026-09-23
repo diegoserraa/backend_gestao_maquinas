@@ -8,6 +8,7 @@ import { testConnection } from "./database/testConnection";
 import { logger } from "./config/logger";
 import "./jobs/manutencaoPreventiva.job";
 import "./jobs/alertasMonitoramento.job";
+import "./jobs/retencaoTelemetria.job";
 
 import { initTelemetriaRealtime } from "./realtime/telemetriaRealtime";
 import "./mqtt/telemetriaSubscriber";

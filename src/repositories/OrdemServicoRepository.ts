@@ -1,14 +1,18 @@
 import { pool } from "../database/connection";
 import { IOrdemServico } from "../interfaces/IordemServico";
+import { Pagina } from "../utils/paginacao";
 
 export class OrdemServicoRepository {
 
-  async listar(empresaId: string): Promise<IOrdemServico[]> {
-    const { rows } = await pool.query(
-      `SELECT * FROM ordens_servico WHERE empresa_id = $1 ORDER BY id DESC`,
-      [empresaId]
-    );
-    return rows;
+  async listar(empresaId: string, { limite, offset }: Pagina): Promise<{ itens: IOrdemServico[]; total: number }> {
+    const [lista, contagem] = await Promise.all([
+      pool.query(
+        `SELECT * FROM ordens_servico WHERE empresa_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3`,
+        [empresaId, limite, offset]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS n FROM ordens_servico WHERE empresa_id = $1`, [empresaId]),
+    ]);
+    return { itens: lista.rows, total: contagem.rows[0].n };
   }
 
   async buscarPorId(id: number, empresaId: string): Promise<IOrdemServico | null> {

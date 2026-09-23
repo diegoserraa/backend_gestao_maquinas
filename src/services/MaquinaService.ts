@@ -1,6 +1,7 @@
 import { IMaquina } from "../interfaces/Imaquina";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
 import { SetorRepository } from "../repositories/SetorRepository";
+import { Pagina } from "../utils/paginacao";
 import { supabase } from "../config/supabase";
 import QRCode from "qrcode";
 
@@ -15,8 +16,8 @@ export class MaquinaService {
         if (!setor) throw new Error("Setor não encontrado");
     }
 
-    async listar(empresaId: string) {
-        return this.repository.listar(empresaId);
+    async listar(empresaId: string, pagina: Pagina) {
+        return this.repository.listar(empresaId, pagina);
     }
 
     async buscarPorId(id: number, empresaId: string) {

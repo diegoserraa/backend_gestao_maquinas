@@ -1,5 +1,6 @@
 import { pool } from "../database/connection";
 import { INotificacao } from "../interfaces/Inotificacao";
+import { Pagina } from "../utils/paginacao";
 
 export class NotificacaoRepository {
 
@@ -35,48 +36,60 @@ export class NotificacaoRepository {
     }
 
     async listarPorUsuario(
-        usuario_id: number
-    ): Promise<INotificacao[]> {
+        usuario_id: number,
+        { limite, offset }: Pagina
+    ): Promise<{ itens: INotificacao[]; total: number }> {
 
-        const { rows } = await pool.query(
-            `
-            SELECT *
-            FROM notificacoes
+        const [lista, contagem] = await Promise.all([
+            pool.query(
+                `
+                SELECT *
+                FROM notificacoes
 
-            WHERE usuario_id = $1
-            AND excluida = false
+                WHERE usuario_id = $1
+                AND excluida = false
 
-            ORDER BY created_at DESC
-            `,
-            [
-                usuario_id
-            ]
-        );
+                ORDER BY created_at DESC
+                LIMIT $2 OFFSET $3
+                `,
+                [usuario_id, limite, offset]
+            ),
+            pool.query(
+                `SELECT COUNT(*)::int AS n FROM notificacoes WHERE usuario_id = $1 AND excluida = false`,
+                [usuario_id]
+            ),
+        ]);
 
-        return rows;
+        return { itens: lista.rows, total: contagem.rows[0].n };
     }
 
     async listarNaoLidas(
-        usuario_id: number
-    ): Promise<INotificacao[]> {
+        usuario_id: number,
+        { limite, offset }: Pagina
+    ): Promise<{ itens: INotificacao[]; total: number }> {
 
-        const { rows } = await pool.query(
-            `
-            SELECT *
-            FROM notificacoes
+        const [lista, contagem] = await Promise.all([
+            pool.query(
+                `
+                SELECT *
+                FROM notificacoes
 
-            WHERE usuario_id = $1
-            AND lida = false
-            AND excluida = false
+                WHERE usuario_id = $1
+                AND lida = false
+                AND excluida = false
 
-            ORDER BY created_at DESC
-            `,
-            [
-                usuario_id
-            ]
-        );
+                ORDER BY created_at DESC
+                LIMIT $2 OFFSET $3
+                `,
+                [usuario_id, limite, offset]
+            ),
+            pool.query(
+                `SELECT COUNT(*)::int AS n FROM notificacoes WHERE usuario_id = $1 AND lida = false AND excluida = false`,
+                [usuario_id]
+            ),
+        ]);
 
-        return rows;
+        return { itens: lista.rows, total: contagem.rows[0].n };
     }
 
     async contarNaoLidas(

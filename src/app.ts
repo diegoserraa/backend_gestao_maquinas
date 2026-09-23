@@ -20,6 +20,8 @@ app.use(
   cors({
     origin:["https://frontend-gestao-maquinas.vercel.app","http://localhost:4173",
       "http://localhost:5173"],
+    // o total das listagens paginadas vai neste cabeçalho
+    exposedHeaders: ["X-Total-Count"],
   })
 );
 

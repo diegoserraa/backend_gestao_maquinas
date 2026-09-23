@@ -1,11 +1,12 @@
 import { Pool } from "pg";
 import { pool } from "../database/connection";
 import { IMaquina } from "../interfaces/Imaquina";
+import { Pagina } from "../utils/paginacao";
 
 export class MaquinaRepository {
 
-       async listar(empresaId: string): Promise<any[]> {
-  const { rows } = await pool.query(`
+       async listar(empresaId: string, { limite, offset }: Pagina): Promise<{ itens: any[]; total: number }> {
+  const [lista, contagem] = await Promise.all([pool.query(`
     SELECT
       m.*,
       s.id AS setor_id_ref,
@@ -14,9 +15,11 @@ export class MaquinaRepository {
     LEFT JOIN setores s ON s.id = m.setor_id
     WHERE m.empresa_id = $1
     ORDER BY m.id
-  `, [empresaId]);
+    LIMIT $2 OFFSET $3
+  `, [empresaId, limite, offset]),
+  pool.query(`SELECT COUNT(*)::int AS n FROM maquinas WHERE empresa_id = $1`, [empresaId])]);
 
-  return rows.map(({
+  const itens = lista.rows.map(({
     setor_id_ref,
     setor_nome,
     ...machine
@@ -29,6 +32,8 @@ export class MaquinaRepository {
         }
       : null,
   }));
+
+  return { itens, total: contagem.rows[0].n };
 }
     async atualizarQrCode(id: number, qrCode: string, empresaId: string): Promise<void> {
 
