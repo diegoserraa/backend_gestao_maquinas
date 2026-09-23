@@ -5,13 +5,13 @@ export class ParceiroService {
 
     private repository = new ParceiroRepository();
 
-    async listar() {
-        return this.repository.listar();
+    async listar(empresaId: string) {
+        return this.repository.listar(empresaId);
     }
 
-    async buscarPorId(id: number) {
+    async buscarPorId(id: number, empresaId: string) {
 
-        const parceiro = await this.repository.buscarPorId(id);
+        const parceiro = await this.repository.buscarPorId(id, empresaId);
 
         if (!parceiro) {
             throw new Error("Parceiro não encontrado");
@@ -20,26 +20,27 @@ export class ParceiroService {
         return parceiro;
     }
 
-    async criar(parceiro: IParceiro) {
+    async criar(parceiro: IParceiro, empresaId: string) {
     if (parceiro.cnpj) {
     const existente =
-        await this.repository.buscarPorCnpj(parceiro.cnpj);
+        await this.repository.buscarPorCnpj(parceiro.cnpj, empresaId);
 
     if (existente) {
         throw new Error("Já existe um parceiro com este CNPJ.");
     }
 
-    return this.repository.criar(parceiro);
+    return this.repository.criar(parceiro, empresaId);
 }
 }
 
     async atualizar(
         id: number,
-        parceiro: IParceiro
+        parceiro: IParceiro,
+        empresaId: string
     ) {
 
         const existente =
-            await this.repository.buscarPorId(id);
+            await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Parceiro não encontrado");
@@ -47,19 +48,20 @@ export class ParceiroService {
 
         return this.repository.atualizar(
             id,
-            parceiro
+            parceiro,
+            empresaId
         );
     }
 
-    async excluir(id: number) {
+    async excluir(id: number, empresaId: string) {
 
         const existente =
-            await this.repository.buscarPorId(id);
+            await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Parceiro não encontrado");
         }
 
-        await this.repository.excluir(id);
+        await this.repository.excluir(id, empresaId);
     }
 }

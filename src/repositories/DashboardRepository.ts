@@ -8,12 +8,13 @@ export class DashboardRepository {
     private montarFiltroPeriodo(
         dataInicio?: string,
         dataFim?: string,
-        campo = "os.data_abertura"
+        campo = "os.data_abertura",
+        valoresIniciais: any[] = []
     ) {
 
 
         const filtros:string[] = [];
-        const valores:any[] = [];
+        const valores:any[] = [...valoresIniciais];
 
 
 
@@ -69,13 +70,16 @@ export class DashboardRepository {
 
     async obterKPIs(
     dataInicio?: string,
-    dataFim?: string
+    dataFim?: string,
+    empresaId?: string
 ) {
 
     const filtro =
         this.montarFiltroPeriodo(
             dataInicio,
-            dataFim
+            dataFim,
+            "os.data_abertura",
+            [empresaId]
         );
 
     const { rows } =
@@ -112,6 +116,7 @@ export class DashboardRepository {
             FROM ordens_servico os
 
             WHERE os.status <> 'CANCELADA'
+              AND os.empresa_id = $1
 
             ${filtro.where}
 
@@ -138,7 +143,8 @@ export class DashboardRepository {
 
     async obterEvolucaoOS(
         dataInicio?:string,
-        dataFim?:string
+        dataFim?:string,
+        empresaId?: string
     ){
 
 
@@ -146,7 +152,9 @@ export class DashboardRepository {
         const filtro =
             this.montarFiltroPeriodo(
                 dataInicio,
-                dataFim
+                dataFim,
+                "os.data_abertura",
+                [empresaId]
             );
 
 
@@ -165,7 +173,7 @@ export class DashboardRepository {
             FROM ordens_servico os
 
 
-            WHERE 1=1
+            WHERE os.empresa_id = $1
 
             ${filtro.where}
 
@@ -205,12 +213,14 @@ export class DashboardRepository {
 
 async obterTempoMedioResolucao(
   dataInicio?: string,
-  dataFim?: string
+  dataFim?: string,
+  empresaId?: string
 ) {
   const filtro = this.montarFiltroPeriodo(
     dataInicio,
     dataFim,
-    "os.data_abertura"
+    "os.data_abertura",
+    [empresaId]
   );
 
   const { rows } = await pool.query(
@@ -231,6 +241,7 @@ async obterTempoMedioResolucao(
     WHERE
       os.status = 'FINALIZADA'
       AND os.data_resolucao IS NOT NULL
+      AND os.empresa_id = $1
 
       ${filtro.where}
 
@@ -307,14 +318,17 @@ private formatarTempo(segundos: number) {
 
     async obterMaquinasMaisParadas(
         dataInicio?:string,
-        dataFim?:string
+        dataFim?:string,
+        empresaId?: string
     ){
 
 
         const filtro =
             this.montarFiltroPeriodo(
                 dataInicio,
-                dataFim
+                dataFim,
+                "os.data_abertura",
+                [empresaId]
             );
 
 
@@ -339,7 +353,7 @@ private formatarTempo(segundos: number) {
 
 
 
-            WHERE 1=1
+            WHERE m.empresa_id = $1
 
             ${filtro.where}
 
@@ -377,13 +391,16 @@ private formatarTempo(segundos: number) {
 
 async obterPreventivasVencidas(
     dataInicio?: string,
-    dataFim?: string
+    dataFim?: string,
+    empresaId?: string
 ) {
 
     const filtro =
         this.montarFiltroPeriodo(
             dataInicio,
-            dataFim
+            dataFim,
+            "os.data_abertura",
+            [empresaId]
         );
 
     const wherePeriodo =
@@ -411,6 +428,7 @@ async obterPreventivasVencidas(
             m.proxima_manutencao IS NOT NULL
 
             AND m.proxima_manutencao < CURRENT_DATE
+            AND m.empresa_id = $1
 
             ${wherePeriodo}
 
@@ -454,14 +472,17 @@ async obterPreventivasVencidas(
 
     async obterRankingTecnicos(
         dataInicio?:string,
-        dataFim?:string
+        dataFim?:string,
+        empresaId?: string
     ){
 
 
         const filtro =
             this.montarFiltroPeriodo(
                 dataInicio,
-                dataFim
+                dataFim,
+                "os.data_abertura",
+                [empresaId]
             );
 
 
@@ -488,6 +509,7 @@ async obterPreventivasVencidas(
 
 
         WHERE os.status='FINALIZADA' and os.id_tecnico <> 7
+        AND os.empresa_id = $1
 
 
         ${filtro.where}
@@ -528,13 +550,16 @@ async obterPreventivasVencidas(
 
 async obterCustos(
     dataInicio?: string,
-    dataFim?: string
+    dataFim?: string,
+    empresaId?: string
 ) {
 
     const filtro =
         this.montarFiltroPeriodo(
             dataInicio,
-            dataFim
+            dataFim,
+            "os.data_abertura",
+            [empresaId]
         );
 
 
@@ -578,7 +603,7 @@ async obterCustos(
         FROM ordens_servico os
 
 
-        WHERE os.status = 'FINALIZADA'
+        WHERE os.status = 'FINALIZADA' AND os.empresa_id = $1
 
 
         ${filtro.where}
@@ -648,7 +673,7 @@ async obterCustos(
 
 
 
-        WHERE os.status = 'FINALIZADA'
+        WHERE os.status = 'FINALIZADA' AND os.empresa_id = $1
 
 
 
@@ -710,7 +735,7 @@ async obterCustos(
 
 
 
-        WHERE os.status = 'FINALIZADA'
+        WHERE os.status = 'FINALIZADA' AND os.empresa_id = $1
 
 
 
@@ -775,7 +800,7 @@ async obterCustos(
 
 
 
-        WHERE os.status = 'FINALIZADA'
+        WHERE os.status = 'FINALIZADA' AND os.empresa_id = $1
 
 
 
@@ -834,7 +859,7 @@ async obterCustos(
 
 
 
-    async obterAlertas(){
+    async obterAlertas(empresaId: string){
 
 
         const {rows}=
@@ -862,13 +887,14 @@ async obterCustos(
             'FINALIZADA',
             'CANCELADA'
         )
+        AND empresa_id = $1
 
 
         ORDER BY data_abertura DESC
 
 
 
-        `);
+        `, [empresaId]);
 
 
 
@@ -891,20 +917,20 @@ async obterCustos(
 
 
 
-   async obterTotalOSTecnico(tecnicoId: number) {
+   async obterTotalOSTecnico(tecnicoId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT COUNT(*) AS total
         FROM ordens_servico
-        WHERE id_tecnico = $1
+        WHERE id_tecnico = $1 AND empresa_id = $2
         `,
-        [tecnicoId]
+        [tecnicoId, empresaId]
     );
 
     return rows[0];
 }
 
-async obterOSTecnicoAbertas(tecnicoId: number) {
+async obterOSTecnicoAbertas(tecnicoId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT
@@ -919,10 +945,11 @@ async obterOSTecnicoAbertas(tecnicoId: number) {
         FROM ordens_servico os
         LEFT JOIN maquinas m ON m.id = os.maquina_id
         WHERE os.id_tecnico = $1
+        AND os.empresa_id = $2
         AND os.status IN ('ABERTA', 'ATRIBUIDA')
         ORDER BY os.data_abertura DESC
         `,
-        [tecnicoId]
+        [tecnicoId, empresaId]
     );
 
     return {
@@ -931,7 +958,7 @@ async obterOSTecnicoAbertas(tecnicoId: number) {
     };
 }
 
-async obterOSAndamentoTecnico(tecnicoId: number) {
+async obterOSAndamentoTecnico(tecnicoId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT
@@ -947,10 +974,11 @@ async obterOSAndamentoTecnico(tecnicoId: number) {
         FROM ordens_servico os
         LEFT JOIN maquinas m ON m.id = os.maquina_id
         WHERE os.id_tecnico = $1
+        AND os.empresa_id = $2
         AND os.status = 'EM_ANDAMENTO'
         ORDER BY os.data_inicio_atendimento DESC
         `,
-        [tecnicoId]
+        [tecnicoId, empresaId]
     );
 
     return {
@@ -959,7 +987,7 @@ async obterOSAndamentoTecnico(tecnicoId: number) {
     };
 }
 
-async obterOSFinalizadasTecnico(tecnicoId: number) {
+async obterOSFinalizadasTecnico(tecnicoId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT
@@ -977,11 +1005,12 @@ async obterOSFinalizadasTecnico(tecnicoId: number) {
         FROM ordens_servico os
         LEFT JOIN maquinas m ON m.id = os.maquina_id
         WHERE os.id_tecnico = $1
+        AND os.empresa_id = $2
         AND os.status = 'FINALIZADA'
         ORDER BY os.data_resolucao DESC
         LIMIT 20
         `,
-        [tecnicoId]
+        [tecnicoId, empresaId]
     );
 
     return {
@@ -990,7 +1019,7 @@ async obterOSFinalizadasTecnico(tecnicoId: number) {
     };
 }
 
-async obterHistoricoTecnico(tecnicoId: number) {
+async obterHistoricoTecnico(tecnicoId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT
@@ -1008,10 +1037,11 @@ async obterHistoricoTecnico(tecnicoId: number) {
         FROM ordens_servico os
         LEFT JOIN maquinas m ON m.id = os.maquina_id
         WHERE os.id_tecnico = $1
+        AND os.empresa_id = $2
         ORDER BY os.data_abertura DESC
         LIMIT 20
         `,
-        [tecnicoId]
+        [tecnicoId, empresaId]
     );
 
     return rows;
@@ -1029,43 +1059,46 @@ async obterHistoricoTecnico(tecnicoId: number) {
 
 
 
-    async obterOSAbertasOperador(operadorId: number) {
+    async obterOSAbertasOperador(operadorId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT COUNT(*) AS total
         FROM ordens_servico
         WHERE id_solicitante = $1
+        AND empresa_id = $2
         AND status IN ('ABERTA', 'ATRIBUIDA')
         `,
-        [operadorId]
+        [operadorId, empresaId]
     );
 
     return rows[0];
 }
 
-async obterOSAndamentoOperador(operadorId: number) {
+async obterOSAndamentoOperador(operadorId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT COUNT(*) AS total
         FROM ordens_servico
         WHERE id_solicitante = $1
+        AND empresa_id = $2
         AND status = 'EM_ANDAMENTO'
         `,
-        [operadorId]
+        [operadorId, empresaId]
     );
 
     return rows[0];
 }
 
-async obterOSFinalizadasOperador(operadorId: number) {
+async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
     const { rows } = await pool.query(
         `
         SELECT COUNT(*) AS total
         FROM ordens_servico
         WHERE id_solicitante = $1
+        AND empresa_id = $2
         AND status = 'FINALIZADA'
         `,
-        [operadorId]
+        [operadorId, empresaId]
     );
 
     return rows[0];
@@ -1078,7 +1111,8 @@ async obterOSFinalizadasOperador(operadorId: number) {
 
 
     async obterHistoricoOperador(
-        operadorId:number
+        operadorId:number,
+        empresaId: string
     ){
 
 
@@ -1094,6 +1128,7 @@ async obterOSFinalizadasOperador(operadorId: number) {
 
 
         WHERE id_solicitante=$1
+        AND empresa_id=$2
 
 
         ORDER BY data_abertura DESC
@@ -1104,7 +1139,7 @@ async obterOSFinalizadasOperador(operadorId: number) {
 
 
         `,
-        [operadorId]);
+        [operadorId, empresaId]);
 
 
 

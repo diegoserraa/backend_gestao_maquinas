@@ -1,12 +1,15 @@
 export interface FiltrosRelatorioOS {
+  empresaId: string;
   dataInicial?: string;
   dataFinal?: string;
+  setorId?: number;
   maquinaId?: number;
   status?: string;
   tipoManutencao?: string;
 }
 
 export interface FiltrosRelatorioMaquina {
+  empresaId: string;
   dataInicial?: string;
   dataFinal?: string;
   setorId?: number;

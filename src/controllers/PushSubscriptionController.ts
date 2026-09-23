@@ -22,12 +22,10 @@ export class PushSubscriptionController {
         res: Response
     ) => {
 
-        const usuario_id =
-            Number(req.params.usuario_id);
-
+        // ignora req.params.usuario_id: só a própria lista, vinda do token
         const subscriptions =
             await this.service.listarPorUsuario(
-                usuario_id
+                req.user!.id
             );
 
         return res.json(subscriptions);
@@ -41,7 +39,7 @@ export class PushSubscriptionController {
         const id =
             Number(req.params.id);
 
-        await this.service.excluir(id);
+        await this.service.excluir(id, req.user!.id);
 
         return res.sendStatus(204);
     };

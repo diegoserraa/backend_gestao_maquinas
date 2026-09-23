@@ -5,12 +5,12 @@ export class SetorService {
 
     private repository = new SetorRepository();
 
-    async listar() {
-        return this.repository.listar();
+    async listar(empresaId: string) {
+        return this.repository.listar(empresaId);
     }
 
-    async buscarPorId(id: number) {
-        const setor = await this.repository.buscarPorId(id);
+    async buscarPorId(id: number, empresaId: string) {
+        const setor = await this.repository.buscarPorId(id, empresaId);
 
         if (!setor) {
             throw new Error("Setor não encontrado");
@@ -19,29 +19,29 @@ export class SetorService {
         return setor;
     }
 
-    async criar(setor: ISetor) {
-        return this.repository.criar(setor);
+    async criar(setor: ISetor, empresaId: string) {
+        return this.repository.criar(setor, empresaId);
     }
 
-    async atualizar(id: number, setor: ISetor) {
+    async atualizar(id: number, setor: ISetor, empresaId: string) {
 
-        const existente = await this.repository.buscarPorId(id);
+        const existente = await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Setor não encontrado");
         }
 
-        return this.repository.atualizar(id, setor);
+        return this.repository.atualizar(id, setor, empresaId);
     }
 
-    async excluir(id: number) {
+    async excluir(id: number, empresaId: string) {
 
-        const existente = await this.repository.buscarPorId(id);
+        const existente = await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Setor não encontrado");
         }
 
-        await this.repository.excluir(id);
+        await this.repository.excluir(id, empresaId);
     }
 }

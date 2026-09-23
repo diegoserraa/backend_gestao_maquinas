@@ -3,6 +3,9 @@ import { UsuarioRepository } from "../repositories/UsuarioRepository";
 import { NotificacaoSistemaService } from "./notificacaoSistemaService";
 import { IOrdemServico } from "../interfaces/IordemServico";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
+import { logger } from "../config/logger";
+
+const log = logger.child({ modulo: "ordem-servico" });
 
 const TRANSICOES: Record<string, string[]> = {
   ABERTA: ["ATRIBUIDA", "CANCELADA"],
@@ -20,9 +23,9 @@ export class OrdemServicoService {
   private maquinaRepository: MaquinaRepository
 ) {}
 
-  private async buscarOuFalhar(id: number): Promise<IOrdemServico> {
+  private async buscarOuFalhar(id: number, empresaId: string): Promise<IOrdemServico> {
 
-    const os = await this.repo.buscarPorId(id);
+    const os = await this.repo.buscarPorId(id, empresaId);
 
     if (!os) {
       throw new Error("Ordem de serviço não encontrada");
@@ -41,22 +44,17 @@ export class OrdemServicoService {
 
   }
 
-  async listar() {
-    return this.repo.listar();
+  async listar(empresaId: string) {
+    return this.repo.listar(empresaId);
   }
 
-  async buscarPorId(id:number) {
-    return this.buscarOuFalhar(id);
+  async buscarPorId(id:number, empresaId: string) {
+    return this.buscarOuFalhar(id, empresaId);
   }
 
   // Operador abre OS
 // Operador abre OS
-async criar(dados:IOrdemServico) {
-
-  console.log(
-    "📥 Dados recebidos para criar OS:",
-    dados
-  );
+async criar(dados:IOrdemServico, empresaId: string) {
 
   const ordem =
     await this.repo.criar({
@@ -65,35 +63,23 @@ async criar(dados:IOrdemServico) {
       data_abertura: new Date().toISOString(),
       tipo_manutencao:
         dados.tipo_manutencao ?? "CORRETIVA"
-    });
+    }, empresaId);
 
-  console.log(
-    "✅ OS criada:",
-    ordem
-  );
+  log.info({ osId: ordem.id, maquinaId: ordem.maquina_id, empresaId }, "O.S. criada");
 
   const maquina =
     await this.maquinaRepository.buscarPorId(
-      ordem.maquina_id
+      ordem.maquina_id,
+      empresaId
     );
 
   const nomeMaquina =
     maquina?.nome ??
     `Máquina ${ordem.maquina_id}`;
 
-  console.log(
-    "🏭 Máquina encontrada:",
-    nomeMaquina
-  );
-
   const usuarios =
     await this.usuarioRepository
-    .buscarGestoresETecnicos();
-
-  console.log(
-    "👥 Usuários encontrados para notificar:",
-    usuarios
-  );
+    .buscarGestoresETecnicos(empresaId);
 
   const gestoresIds =
     usuarios
@@ -113,24 +99,10 @@ async criar(dados:IOrdemServico) {
       usuario => usuario.id
     );
 
-  console.log(
-    "👔 Gestores:",
-    gestoresIds
-  );
-
-  console.log(
-    "🔧 Técnicos:",
-    tecnicosIds
-  );
-
   if(
     gestoresIds.length ||
     tecnicosIds.length
   ){
-
-    console.log(
-      "🔔 Chamando notificarOSCriada..."
-    );
 
     await this.notificacaoSistemaService
     .notificarOSCriada(
@@ -140,15 +112,14 @@ async criar(dados:IOrdemServico) {
       ordem.id || 0
     );
 
-    console.log(
-      "✅ Notificação criada com sucesso"
+    log.info(
+      { osId: ordem.id, gestores: gestoresIds.length, tecnicos: tecnicosIds.length },
+      "notificação de O.S. criada enviada"
     );
 
   }else{
 
-    console.log(
-      "⚠️ Nenhum gestor ou técnico encontrado para notificar"
-    );
+    log.warn({ osId: ordem.id, empresaId }, "nenhum gestor ou técnico pra notificar sobre a O.S.");
 
   }
 
@@ -159,12 +130,13 @@ async criar(dados:IOrdemServico) {
 
   async atualizar(
     id:number,
-    dados:IOrdemServico
+    dados:IOrdemServico,
+    empresaId: string
   ){
 
-    await this.buscarOuFalhar(id);
+    await this.buscarOuFalhar(id, empresaId);
 
-    return this.repo.atualizar(id,dados);
+    return this.repo.atualizar(id,dados, empresaId);
 
   }
 
@@ -173,10 +145,11 @@ async criar(dados:IOrdemServico) {
   async atribuir(
     id:number,
     id_tecnico:number,
-    id_atribuido_por:number
+    id_atribuido_por:number,
+    empresaId: string
   ){
 
-    const os = await this.buscarOuFalhar(id);
+    const os = await this.buscarOuFalhar(id, empresaId);
 
     this.validarTransicao(
       os.status,
@@ -190,14 +163,15 @@ async criar(dados:IOrdemServico) {
         id_atribuido_por,
         data_atribuicao:new Date().toISOString(),
         status:"ATRIBUIDA"
-      });
+      }, empresaId);
 
 
     if(atualizada){
 
   const maquina =
     await this.maquinaRepository.buscarPorId(
-      os.maquina_id
+      os.maquina_id,
+      empresaId
     );
 
   const nomeMaquina =
@@ -219,9 +193,9 @@ async criar(dados:IOrdemServico) {
 
 
   // Técnico inicia atendimento
-  async iniciar(id:number){
+  async iniciar(id:number, empresaId: string){
 
-    const os = await this.buscarOuFalhar(id);
+    const os = await this.buscarOuFalhar(id, empresaId);
 
     this.validarTransicao(
       os.status,
@@ -232,7 +206,7 @@ async criar(dados:IOrdemServico) {
     return this.repo.patch(id,{
       status:"EM_ANDAMENTO",
       data_inicio_atendimento:new Date().toISOString()
-    });
+    }, empresaId);
 
   }
 
@@ -241,13 +215,14 @@ async criar(dados:IOrdemServico) {
 async finalizar(
   id: number,
   resolucao: string,
+  empresaId: string,
   valor_gasto?: number,
   id_parceiro?: number,
   valor_parceiro?: number
 ) {
 
   const os =
-    await this.buscarOuFalhar(id);
+    await this.buscarOuFalhar(id, empresaId);
 
   this.validarTransicao(
     os.status,
@@ -276,13 +251,14 @@ async finalizar(
       id_parceiro: id_parceiro ?? null,
       valor_parceiro: valor_parceiro ?? 0,
       data_resolucao: dataResolucao.toISOString()
-    });
+    }, empresaId);
 
   if (finalizada) {
 
     const maquina =
       await this.maquinaRepository.buscarPorId(
-        os.maquina_id
+        os.maquina_id,
+        empresaId
       );
 
     // ==========================
@@ -304,16 +280,13 @@ async finalizar(
       await this.maquinaRepository.registrarPreventiva(
   maquina.id!,
   hoje,
-  proximaManutencao
+  proximaManutencao,
+  empresaId
 );
 
-      console.log(
-        "🔄 Datas de manutenção atualizadas",
-        {
-          maquina: maquina.nome,
-          ultima: dataResolucao,
-          proxima: proximaManutencao
-        }
+      log.info(
+        { maquinaId: maquina.id, ultima: dataResolucao, proxima: proximaManutencao },
+        "datas de manutenção preventiva atualizadas"
       );
     }
 
@@ -321,14 +294,9 @@ async finalizar(
       maquina?.nome ??
       `Máquina ${os.maquina_id}`;
 
-    console.log(
-      "🏁 OS finalizada",
-      {
-        osId: id,
-        solicitante: os.id_solicitante,
-        atribuidoPor: os.id_atribuido_por,
-        maquina: nomeMaquina
-      }
+    log.info(
+      { osId: id, solicitante: os.id_solicitante, atribuidoPor: os.id_atribuido_por, maquina: nomeMaquina },
+      "O.S. finalizada"
     );
 
     const destinatarios =
@@ -346,11 +314,6 @@ async finalizar(
       );
     }
 
-    console.log(
-      "📲 Destinatários:",
-      [...destinatarios]
-    );
-
     for (const usuarioId of destinatarios) {
 
       await this.notificacaoSistemaService.notificar(
@@ -360,11 +323,6 @@ async finalizar(
         "OS_FINALIZADA",
         `/ordens-servico/${os.id || 0}`
       );
-
-      console.log(
-        "✅ Notificação enviada para:",
-        usuarioId
-      );
     }
   }
 
@@ -373,10 +331,11 @@ async finalizar(
 
   async cancelar(
     id:number,
-    motivo_cancelamento:string
+    motivo_cancelamento:string,
+    empresaId: string
   ){
 
-    const os = await this.buscarOuFalhar(id);
+    const os = await this.buscarOuFalhar(id, empresaId);
 
     this.validarTransicao(
       os.status,
@@ -395,21 +354,23 @@ async finalizar(
       status:"CANCELADA",
       motivo_cancelamento,
       data_cancelamento:new Date().toISOString()
-    });
+    }, empresaId);
 
   }
 async indicadoresPorMaquina(
-  maquinaId: number
+  maquinaId: number,
+  empresaId: string
 ) {
-  return this.repo.indicadoresPorMaquina(maquinaId);
+  return this.repo.indicadoresPorMaquina(maquinaId, empresaId);
 }
 
   async pausar(
     id:number,
-    motivo_cancelamento:string
+    motivo_cancelamento:string,
+    empresaId: string
   ){
 
-    const os = await this.buscarOuFalhar(id);
+    const os = await this.buscarOuFalhar(id, empresaId);
 
     this.validarTransicao(
       os.status,
@@ -420,17 +381,18 @@ async indicadoresPorMaquina(
     return this.repo.patch(id,{
       status:"PAUSADA",
       motivo_cancelamento
-    });
+    }, empresaId);
 
   }
 
 
   async alterarPrioridade(
     id:number,
-    prioridade:string
+    prioridade:string,
+    empresaId: string
   ){
 
-    const os = await this.buscarOuFalhar(id);
+    const os = await this.buscarOuFalhar(id, empresaId);
 
 
     if(
@@ -445,14 +407,14 @@ async indicadoresPorMaquina(
 
     return this.repo.patch(id,{
       prioridade
-    });
+    }, empresaId);
 
   }
-  async excluir(id:number){
+  async excluir(id:number, empresaId: string){
 
-  await this.buscarOuFalhar(id);
+  await this.buscarOuFalhar(id, empresaId);
 
-  await this.repo.excluir(id);
+  await this.repo.excluir(id, empresaId);
 
 }
 

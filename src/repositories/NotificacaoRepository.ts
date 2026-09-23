@@ -6,7 +6,6 @@ export class NotificacaoRepository {
     async criar(
         notificacao: INotificacao
     ): Promise<INotificacao> {
-        console.log("notificacao", notificacao);
         const { rows } = await pool.query(
             `
             INSERT INTO notificacoes
@@ -15,10 +14,11 @@ export class NotificacaoRepository {
                 titulo,
                 mensagem,
                 tipo,
-                url
+                url,
+                empresa_id
             )
             VALUES
-            ($1,$2,$3,$4,$5)
+            ($1,$2,$3,$4,$5, (SELECT empresa_id FROM usuarios WHERE id = $1))
 
             RETURNING *
             `,
@@ -27,7 +27,7 @@ export class NotificacaoRepository {
                 notificacao.titulo,
                 notificacao.mensagem,
                 notificacao.tipo,
-                notificacao.url 
+                notificacao.url
             ]
         );
 
@@ -102,7 +102,8 @@ export class NotificacaoRepository {
     }
 
     async marcarComoLida(
-        id: number
+        id: number,
+        usuarioId: number
     ): Promise<void> {
 
         await pool.query(
@@ -111,10 +112,11 @@ export class NotificacaoRepository {
 
             SET lida = true
 
-            WHERE id = $1
+            WHERE id = $1 AND usuario_id = $2
             `,
             [
-                id
+                id,
+                usuarioId
             ]
         );
     }
@@ -139,7 +141,8 @@ export class NotificacaoRepository {
     }
 
     async excluir(
-        id: number
+        id: number,
+        usuarioId: number
     ): Promise<void> {
 
         await pool.query(
@@ -150,10 +153,11 @@ export class NotificacaoRepository {
                 excluida = true,
                 data_exclusao = NOW()
 
-            WHERE id = $1
+            WHERE id = $1 AND usuario_id = $2
             `,
             [
-                id
+                id,
+                usuarioId
             ]
         );
     }

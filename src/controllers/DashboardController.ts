@@ -26,7 +26,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterKPIs(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -60,7 +61,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterEvolucaoOS(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -92,7 +94,9 @@ export class DashboardController {
             const dados =
                 await this.service.obterTempoMedioResolucao(
                     dataInicio as string,
-                    dataFim as string);
+                    dataFim as string,
+                    req.empresaId!
+                );
 
 
             return res.json(dados);
@@ -128,7 +132,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterMaquinasMaisParadas(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -170,7 +175,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterPreventivasVencidas(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -213,7 +219,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterRankingTecnicos(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -256,7 +263,8 @@ export class DashboardController {
             const dados =
                 await this.service.obterCustos(
                     dataInicio as string,
-                    dataFim as string
+                    dataFim as string,
+                    req.empresaId!
                 );
 
 
@@ -294,7 +302,7 @@ export class DashboardController {
 
 
             const dados =
-                await this.service.obterAlertas();
+                await this.service.obterAlertas(req.empresaId!);
 
 
 
@@ -335,15 +343,12 @@ export class DashboardController {
 
         try {
 
-
-            const tecnicoId =
-                Number(req.params.id);
-
-
-
+            // sempre o próprio usuário logado — nunca o :id da URL, senão
+            // qualquer um veria o dashboard de outro técnico só trocando o id
             const dados =
                 await this.service.obterDashboardTecnico(
-                    tecnicoId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 
@@ -381,15 +386,10 @@ export class DashboardController {
 
         try {
 
-
-            const tecnicoId =
-                Number(req.params.id);
-
-
-
             const dados =
                 await this.service.obterOSTecnicoAbertas(
-                    tecnicoId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 
@@ -427,15 +427,10 @@ export class DashboardController {
 
         try {
 
-
-            const tecnicoId =
-                Number(req.params.id);
-
-
-
             const dados =
                 await this.service.obterOSTecnicoAndamento(
-                    tecnicoId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 
@@ -473,15 +468,10 @@ export class DashboardController {
 
         try {
 
-
-            const tecnicoId =
-                Number(req.params.id);
-
-
-
             const dados =
                 await this.service.obterOSTecnicoFinalizadas(
-                    tecnicoId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 
@@ -511,11 +501,9 @@ export class DashboardController {
 
 
 
-
     // =========================
     // OPERADOR
     // =========================
-
 
 
 
@@ -527,15 +515,10 @@ export class DashboardController {
 
         try {
 
-
-            const operadorId =
-                Number(req.params.id);
-
-
-
             const dados =
                 await this.service.obterDashboardOperador(
-                    operadorId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 
@@ -572,15 +555,10 @@ export class DashboardController {
 
         try {
 
-
-            const operadorId =
-                Number(req.params.id);
-
-
-
             const dados =
                 await this.service.obterOSOperador(
-                    operadorId
+                    req.user!.id,
+                    req.empresaId!
                 );
 
 

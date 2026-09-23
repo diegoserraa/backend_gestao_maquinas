@@ -11,7 +11,7 @@ export class MaquinaController {
     ) => {
 
         const maquinas =
-            await this.service.listar();
+            await this.service.listar(req.empresaId!);
 
         return res.json(maquinas);
     };
@@ -25,7 +25,7 @@ export class MaquinaController {
             Number(req.params.id);
 
         const maquina =
-            await this.service.buscarPorId(id);
+            await this.service.buscarPorId(id, req.empresaId!);
 
         return res.json(maquina);
     };
@@ -35,7 +35,7 @@ criar = async (req: Request, res: Response) => {
         const maquina = req.body;
         const file = req.file;
 
-        const resultado = await this.service.criar(maquina, file);
+        const resultado = await this.service.criar(maquina, req.empresaId!, file);
 
         return res.status(201).json(resultado);
     } catch (error: any) {
@@ -54,6 +54,7 @@ criar = async (req: Request, res: Response) => {
         const resultado = await this.service.atualizar(
             id,
             maquina,
+            req.empresaId!,
             file
         );
 
@@ -73,7 +74,7 @@ criar = async (req: Request, res: Response) => {
         const id =
             Number(req.params.id);
 
-        await this.service.excluir(id);
+        await this.service.excluir(id, req.empresaId!);
 
         return res.sendStatus(204);
     };
@@ -85,14 +86,14 @@ criar = async (req: Request, res: Response) => {
     const id = Number(req.params.id);
 
     const maquina =
-        await this.service.alternarStatus(id);
+        await this.service.alternarStatus(id, req.empresaId!);
 
     return res.json(maquina);
 };
 listarOsPorMaquina = async (req: Request, res: Response) => {
     const id = Number(req.params.id);
 
-    const os = await this.service.listarOsPorMaquina(id);
+    const os = await this.service.listarOsPorMaquina(id, req.empresaId!);
 
     return res.json(os);
 };

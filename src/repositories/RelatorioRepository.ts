@@ -20,11 +20,11 @@ export class RelatorioRepository {
     filtros: FiltrosRelatorioOS
   ): Promise<RelatorioOS[]> {
 
-    const params: any[] = [];
+    const params: any[] = [filtros.empresaId];
 
-    const conditions: string[] = [];
+    const conditions: string[] = [`os.empresa_id = $1`];
 
-    let paramIndex = 1;
+    let paramIndex = 2;
 
 
     /* =========================
@@ -254,11 +254,11 @@ export class RelatorioRepository {
     filtros: FiltrosRelatorioMaquina
   ): Promise<RelatorioIndicadorMaquina[]> {
 
-    const params: any[] = [];
+    const params: any[] = [filtros.empresaId];
 
-    const conditions: string[] = [];
+    const conditions: string[] = [`m.empresa_id = $1`];
 
-    let paramIndex = 1;
+    let paramIndex = 2;
 
 
     /* =====================================================
@@ -348,23 +348,25 @@ export class RelatorioRepository {
 
     /* =====================================================
        WHERE DOS FILTROS
+       (conditions sempre tem ao menos o filtro de empresa)
     ===================================================== */
 
     const where =
-      conditions.length > 0
-        ? `WHERE ${conditions.join(" AND ")}`
-        : "";
+      `WHERE ${conditions.join(" AND ")}`;
 
 
     /* =====================================================
        SOMENTE MÁQUINAS
        QUE POSSUEM OS FILTRADAS
+       (só quando o usuário aplicou algum filtro além da
+       empresa — senão continua mostrando toda máquina, com
+       ou sem OS, como antes)
     ===================================================== */
 
     const somenteComOS =
-      conditions.length > 0
-        ? `WHERE os.id IS NOT NULL`
-        : "";
+      conditions.length > 1
+        ? `WHERE m.empresa_id = $1 AND os.id IS NOT NULL`
+        : `WHERE m.empresa_id = $1`;
 
 
     /* =====================================================

@@ -8,7 +8,7 @@ export class AnexoController {
         try {
             const id = Number(req.params.id);
 
-            const anexo = await this.service.buscarPorId(id);
+            const anexo = await this.service.buscarPorId(id, req.empresaId!);
 
             return res.json(anexo);
         } catch (error: any) {
@@ -22,7 +22,7 @@ export class AnexoController {
         const maquinaId = Number(req.params.id);
 
         const anexos =
-            await this.service.listarPorMaquina(maquinaId);
+            await this.service.listarPorMaquina(maquinaId, req.empresaId!);
 
         return res.json(anexos);
     };
@@ -30,7 +30,7 @@ export class AnexoController {
     listarPorOS = async (req: Request, res: Response) => {
         const osId = Number(req.params.id);
 
-        const anexos = await this.service.listarPorOS(osId);
+        const anexos = await this.service.listarPorOS(osId, req.empresaId!);
 
         return res.json(anexos);
     };
@@ -47,7 +47,8 @@ export class AnexoController {
 
             const resultado = await this.service.upload(
                 req.body,
-                file
+                file,
+                req.empresaId!
             );
 
             return res.status(201).json(resultado);
@@ -62,7 +63,7 @@ export class AnexoController {
         try {
             const id = Number(req.params.id);
 
-            await this.service.excluir(id);
+            await this.service.excluir(id, req.empresaId!);
 
             return res.sendStatus(204);
         } catch (error: any) {

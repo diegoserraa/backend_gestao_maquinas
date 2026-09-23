@@ -7,12 +7,12 @@ export class MaquinaService {
 
     private repository = new MaquinaRepository();
 
-    async listar() {
-        return this.repository.listar();
+    async listar(empresaId: string) {
+        return this.repository.listar(empresaId);
     }
 
-    async buscarPorId(id: number) {
-        const maquina = await this.repository.buscarPorId(id);
+    async buscarPorId(id: number, empresaId: string) {
+        const maquina = await this.repository.buscarPorId(id, empresaId);
 
         if (!maquina) {
             throw new Error("Máquina não encontrada");
@@ -22,7 +22,7 @@ export class MaquinaService {
     }
 
     // 🔥 AGORA COM IMAGEM
-  async criar(maquina: IMaquina, file?: Express.Multer.File) {
+  async criar(maquina: IMaquina, empresaId: string, file?: Express.Multer.File) {
 
      // 1. calcula próxima manutenção
     if (
@@ -37,7 +37,7 @@ export class MaquinaService {
     }
 
     // 1. cria máquina primeiro no banco
-    const maquinaCriada = await this.repository.criar(maquina);
+    const maquinaCriada = await this.repository.criar(maquina, empresaId);
 
     let imagemUrl: string | null = null;
 
@@ -70,7 +70,8 @@ export class MaquinaService {
         // salva no banco
         await this.repository.atualizarImagem(
             maquinaCriada.id!,
-            imagemUrl
+            imagemUrl,
+            empresaId
         );
     }
 
@@ -83,7 +84,8 @@ export class MaquinaService {
 
     await this.repository.atualizarQrCode(
         maquinaCriada.id!,
-        qrCodeBase64
+        qrCodeBase64,
+        empresaId
     );
 
     // 4. retorno final
@@ -97,10 +99,11 @@ export class MaquinaService {
    async atualizar(
     id: number,
     maquina: IMaquina,
+    empresaId: string,
     file?: Express.Multer.File
 ) {
     const existente =
-        await this.repository.buscarPorId(id);
+        await this.repository.buscarPorId(id, empresaId);
 
     if (!existente) {
         throw new Error("Máquina não encontrada");
@@ -130,7 +133,7 @@ export class MaquinaService {
 
     // 1. atualiza dados básicos
     const atualizada =
-        await this.repository.atualizar(id, maquina);
+        await this.repository.atualizar(id, maquina, empresaId);
 
     let imagemUrl = existente.imagem_url;
 
@@ -161,7 +164,8 @@ export class MaquinaService {
 
         await this.repository.atualizarImagem(
             id,
-            imagemUrl
+            imagemUrl,
+            empresaId
         );
     }
 
@@ -171,22 +175,22 @@ export class MaquinaService {
     };
 }
 
-    async excluir(id: number) {
+    async excluir(id: number, empresaId: string) {
 
         const existente =
-            await this.repository.buscarPorId(id);
+            await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Máquina não encontrada");
         }
 
-        await this.repository.excluir(id);
+        await this.repository.excluir(id, empresaId);
     }
 
-    async alternarStatus(id: number) {
+    async alternarStatus(id: number, empresaId: string) {
 
         const existente =
-            await this.repository.buscarPorId(id);
+            await this.repository.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Máquina não encontrada");
@@ -197,19 +201,19 @@ export class MaquinaService {
                 ? "inativa"
                 : "ativa";
 
-        return this.repository.alternarStatus(id, novoStatus);
+        return this.repository.alternarStatus(id, novoStatus, empresaId);
     }
 
-    async listarOsPorMaquina(maquinaId: number) {
+    async listarOsPorMaquina(maquinaId: number, empresaId: string) {
 
         const maquina =
-            await this.repository.buscarPorId(maquinaId);
+            await this.repository.buscarPorId(maquinaId, empresaId);
 
         if (!maquina) {
             throw new Error("Máquina não encontrada");
         }
 
-        return this.repository.listarOsPorMaquina(maquinaId);
+        return this.repository.listarOsPorMaquina(maquinaId, empresaId);
     }
     private calcularProximaManutencao(
     ultimaManutencao: string | Date,

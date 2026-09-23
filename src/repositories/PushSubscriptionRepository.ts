@@ -14,10 +14,11 @@ export class PushSubscriptionRepository {
                 usuario_id,
                 endpoint,
                 p256dh,
-                auth
+                auth,
+                empresa_id
             )
             VALUES
-            ($1,$2,$3,$4)
+            ($1,$2,$3,$4, (SELECT empresa_id FROM usuarios WHERE id = $1))
 
             ON CONFLICT (endpoint)
             DO UPDATE SET
@@ -57,15 +58,16 @@ export class PushSubscriptionRepository {
 
 
     async excluir(
-        id: number
+        id: number,
+        usuarioId: number
     ): Promise<void> {
 
         await pool.query(
             `
             DELETE FROM push_subscriptions
-            WHERE id = $1
+            WHERE id = $1 AND usuario_id = $2
             `,
-            [id]
+            [id, usuarioId]
         );
     }
 

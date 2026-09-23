@@ -1,6 +1,8 @@
+import { Request, Response, NextFunction } from "express";
+
 export function roleMiddleware(...roles: string[]) {
 
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
 
         const user = req.user;
 

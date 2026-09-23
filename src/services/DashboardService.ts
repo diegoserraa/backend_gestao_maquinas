@@ -16,13 +16,15 @@ export class DashboardService {
 
 
     async obterKPIs(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
         return this.repository.obterKPIs(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
     }
@@ -33,14 +35,16 @@ export class DashboardService {
 
 
     async obterEvolucaoOS(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
 
         return this.repository.obterEvolucaoOS(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
 
@@ -53,12 +57,14 @@ export class DashboardService {
 
 
  async obterTempoMedioResolucao(
-    dataInicio?: string,
-    dataFim?: string
+    dataInicio: string | undefined,
+    dataFim: string | undefined,
+    empresaId: string
 ) {
     return this.repository.obterTempoMedioResolucao(
         dataInicio,
-        dataFim
+        dataFim,
+        empresaId
     );
 }
 
@@ -69,14 +75,16 @@ export class DashboardService {
 
 
     async obterMaquinasMaisParadas(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
 
         return this.repository.obterMaquinasMaisParadas(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
 
@@ -89,14 +97,16 @@ export class DashboardService {
 
 
     async obterPreventivasVencidas(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
 
         return this.repository.obterPreventivasVencidas(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
 
@@ -109,14 +119,16 @@ export class DashboardService {
 
 
     async obterRankingTecnicos(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
 
         return this.repository.obterRankingTecnicos(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
 
@@ -129,14 +141,16 @@ export class DashboardService {
 
 
     async obterCustos(
-        dataInicio?: string,
-        dataFim?: string
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
     ) {
 
 
         return this.repository.obterCustos(
             dataInicio,
-            dataFim
+            dataFim,
+            empresaId
         );
 
 
@@ -148,10 +162,10 @@ export class DashboardService {
 
 
 
-    async obterAlertas() {
+    async obterAlertas(empresaId: string) {
 
 
-        return this.repository.obterAlertas();
+        return this.repository.obterAlertas(empresaId);
 
 
     }
@@ -170,17 +184,17 @@ export class DashboardService {
 
 
 
-async obterDashboardTecnico(tecnicoId: number) {
+async obterDashboardTecnico(tecnicoId: number, empresaId: string) {
     const [
         total,
         abertas,
         andamento,
         finalizadas
     ] = await Promise.all([
-        this.repository.obterTotalOSTecnico(tecnicoId),
-        this.repository.obterOSTecnicoAbertas(tecnicoId),
-        this.repository.obterOSAndamentoTecnico(tecnicoId),
-        this.repository.obterOSFinalizadasTecnico(tecnicoId)
+        this.repository.obterTotalOSTecnico(tecnicoId, empresaId),
+        this.repository.obterOSTecnicoAbertas(tecnicoId, empresaId),
+        this.repository.obterOSAndamentoTecnico(tecnicoId, empresaId),
+        this.repository.obterOSFinalizadasTecnico(tecnicoId, empresaId)
     ]);
 
     return {
@@ -200,12 +214,14 @@ async obterDashboardTecnico(tecnicoId: number) {
 
 
     async obterOSTecnicoAbertas(
-        tecnicoId:number
+        tecnicoId:number,
+        empresaId: string
     ) {
 
 
         return this.repository.obterOSTecnicoAbertas(
-            tecnicoId
+            tecnicoId,
+            empresaId
         );
 
 
@@ -218,12 +234,14 @@ async obterDashboardTecnico(tecnicoId: number) {
 
 
     async obterOSTecnicoAndamento(
-        tecnicoId:number
+        tecnicoId:number,
+        empresaId: string
     ) {
 
 
         return this.repository.obterOSAndamentoTecnico(
-            tecnicoId
+            tecnicoId,
+            empresaId
         );
 
 
@@ -236,17 +254,18 @@ async obterDashboardTecnico(tecnicoId: number) {
 
 
     async obterOSTecnicoFinalizadas(
-        tecnicoId:number
+        tecnicoId:number,
+        empresaId: string
     ) {
 
 
         return this.repository.obterOSFinalizadasTecnico(
-            tecnicoId
+            tecnicoId,
+            empresaId
         );
 
 
     }
-
 
 
 
@@ -265,15 +284,15 @@ async obterDashboardTecnico(tecnicoId: number) {
 
 
 
-   async obterDashboardOperador(operadorId: number) {
+   async obterDashboardOperador(operadorId: number, empresaId: string) {
     const [
         abertas,
         andamento,
         finalizadas
     ] = await Promise.all([
-        this.repository.obterOSAbertasOperador(operadorId),
-        this.repository.obterOSAndamentoOperador(operadorId),
-        this.repository.obterOSFinalizadasOperador(operadorId)
+        this.repository.obterOSAbertasOperador(operadorId, empresaId),
+        this.repository.obterOSAndamentoOperador(operadorId, empresaId),
+        this.repository.obterOSFinalizadasOperador(operadorId, empresaId)
     ]);
 
     return {
@@ -291,12 +310,14 @@ async obterDashboardTecnico(tecnicoId: number) {
 
 
     async obterOSOperador(
-        operadorId:number
+        operadorId:number,
+        empresaId: string
     ) {
 
 
         return this.repository.obterHistoricoOperador(
-            operadorId
+            operadorId,
+            empresaId
         );
 
 

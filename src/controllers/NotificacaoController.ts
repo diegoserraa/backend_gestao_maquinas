@@ -15,9 +15,10 @@ export class NotificacaoController {
         res:Response
     )=>{
 
-
-        const usuario_id =
-            Number(req.query.usuario_id);
+        // usuario_id vem sempre do token, nunca de query/body — antes
+        // qualquer usuário logado podia ler notificações de outro só
+        // trocando esse parâmetro na requisição.
+        const usuario_id = req.user!.id;
 
 
         const notificacoes =
@@ -39,8 +40,7 @@ export class NotificacaoController {
     )=>{
 
 
-        const usuario_id =
-            Number(req.query.usuario_id);
+        const usuario_id = req.user!.id;
 
 
         const notificacoes =
@@ -62,8 +62,7 @@ export class NotificacaoController {
     )=>{
 
 
-        const usuario_id =
-            Number(req.query.usuario_id);
+        const usuario_id = req.user!.id;
 
 
         const total =
@@ -112,7 +111,8 @@ export class NotificacaoController {
 
 
         await this.service.marcarComoLida(
-            id
+            id,
+            req.user!.id
         );
 
 
@@ -129,8 +129,7 @@ export class NotificacaoController {
     )=>{
 
 
-        const usuario_id =
-            Number(req.body.usuario_id);
+        const usuario_id = req.user!.id;
 
 
         await this.service.marcarTodasComoLidas(
@@ -156,7 +155,8 @@ export class NotificacaoController {
 
 
         await this.service.excluir(
-            id
+            id,
+            req.user!.id
         );
 
 

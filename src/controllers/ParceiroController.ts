@@ -11,7 +11,7 @@ export class ParceiroController {
     ) => {
 
         const parceiros =
-            await this.service.listar();
+            await this.service.listar(req.empresaId!);
 
         return res.json(parceiros);
     };
@@ -24,7 +24,7 @@ export class ParceiroController {
         const id = Number(req.params.id);
 
         const parceiro =
-            await this.service.buscarPorId(id);
+            await this.service.buscarPorId(id, req.empresaId!);
 
         return res.json(parceiro);
     };
@@ -35,7 +35,7 @@ export class ParceiroController {
     ) => {
 
         const parceiro =
-            await this.service.criar(req.body);
+            await this.service.criar(req.body, req.empresaId!);
 
         return res.status(201).json(parceiro);
     };
@@ -50,7 +50,8 @@ export class ParceiroController {
         const parceiro =
             await this.service.atualizar(
                 id,
-                req.body
+                req.body,
+                req.empresaId!
             );
 
         return res.json(parceiro);
@@ -63,7 +64,7 @@ export class ParceiroController {
 
         const id = Number(req.params.id);
 
-        await this.service.excluir(id);
+        await this.service.excluir(id, req.empresaId!);
 
         return res.sendStatus(204);
     };

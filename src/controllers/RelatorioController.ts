@@ -25,6 +25,8 @@ export class RelatorioController {
 
     const filtros = {
 
+      empresaId: req.empresaId!,
+
       dataInicial: dataInicial
         ? String(dataInicial)
         : undefined,
@@ -89,6 +91,8 @@ export class RelatorioController {
 
     const filtros = {
 
+      empresaId: req.empresaId!,
+
       dataInicial: dataInicial
         ? String(dataInicial)
         : undefined,
@@ -147,6 +151,8 @@ export class RelatorioController {
 
     const filtros = {
 
+      empresaId: req.empresaId!,
+
       dataInicial: dataInicial
         ? String(dataInicial)
         : undefined,
@@ -200,6 +206,8 @@ export class RelatorioController {
     } = req.query;
 
     const filtros = {
+
+      empresaId: req.empresaId!,
 
       dataInicial: dataInicial
         ? String(dataInicial)

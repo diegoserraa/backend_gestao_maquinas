@@ -2,6 +2,9 @@ import webpush from "web-push";
 
 import { PushSubscriptionRepository }
 from "../repositories/PushSubscriptionRepository";
+import { logger } from "../config/logger";
+
+const log = logger.child({ modulo: "push" });
 
 webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,
@@ -26,11 +29,9 @@ export class PushNotificationService {
                 .listarPorUsuario(usuario_id);
 
         if (!subscriptions.length) {
-
-            console.log(
-                `⚠️ Nenhuma subscription encontrada para o usuário ${usuario_id}`
-            );
-
+            // comum (usuário nunca ativou push) — não é um problema, não
+            // vale poluir o log em nível info/warn
+            log.debug({ usuarioId: usuario_id }, "sem subscription de push");
             return;
         }
 
@@ -55,16 +56,11 @@ export class PushNotificationService {
                     payload
                 );
 
-                console.log(
-                    `✅ Push enviado para usuário ${usuario_id}`
-                );
+                log.debug({ usuarioId: usuario_id }, "push enviado");
 
             } catch (error: any) {
 
-                console.error(
-                    `❌ Erro ao enviar push para usuário ${usuario_id}`,
-                    error?.message
-                );
+                log.error({ err: error, usuarioId: usuario_id }, "erro ao enviar push");
 
             }
 

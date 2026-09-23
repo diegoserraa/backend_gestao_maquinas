@@ -43,7 +43,7 @@ export class OrdemServicoController {
   listar = async (req: Request, res: Response) => {
 
     const osList =
-      await this.service.listar();
+      await this.service.listar(req.empresaId!);
 
     return res.json(osList);
 
@@ -54,7 +54,8 @@ export class OrdemServicoController {
 
     const os =
       await this.service.buscarPorId(
-        Number(req.params.id)
+        Number(req.params.id),
+        req.empresaId!
       );
 
     return res.json(os);
@@ -66,7 +67,8 @@ export class OrdemServicoController {
 
     const os =
       await this.service.criar(
-        req.body
+        req.body,
+        req.empresaId!
       );
 
     return res
@@ -81,7 +83,8 @@ export class OrdemServicoController {
     const os =
       await this.service.atualizar(
         Number(req.params.id),
-        req.body
+        req.body,
+        req.empresaId!
       );
 
     return res.json(os);
@@ -92,7 +95,8 @@ export class OrdemServicoController {
   excluir = async (req: Request, res: Response) => {
 
     await this.service.excluir(
-      Number(req.params.id)
+      Number(req.params.id),
+      req.empresaId!
     );
 
     return res.sendStatus(204);
@@ -106,7 +110,8 @@ indicadoresPorMaquina = async (
 
   const indicadores =
     await this.service.indicadoresPorMaquina(
-      Number(req.params.id)
+      Number(req.params.id),
+      req.empresaId!
     );
 
   return res.json(indicadores);
@@ -135,7 +140,8 @@ indicadoresPorMaquina = async (
       await this.service.atribuir(
         Number(req.params.id),
         Number(id_tecnico),
-        Number(id_atribuido_por)
+        Number(id_atribuido_por),
+        req.empresaId!
       );
 
 
@@ -148,7 +154,8 @@ indicadoresPorMaquina = async (
 
     const os =
       await this.service.iniciar(
-        Number(req.params.id)
+        Number(req.params.id),
+        req.empresaId!
       );
 
     return res.json(os);
@@ -170,6 +177,7 @@ finalizar = async (req: Request, res: Response) => {
       await this.service.finalizar(
         Number(req.params.id),
         resolucao,
+        req.empresaId!,
         valor_gasto,
         id_parceiro,
         valor_parceiro
@@ -178,7 +186,7 @@ finalizar = async (req: Request, res: Response) => {
 
     return res.json(os);
 
-}; 
+};
 
 
   cancelar = async (req: Request, res: Response) => {
@@ -191,7 +199,8 @@ finalizar = async (req: Request, res: Response) => {
     const os =
       await this.service.cancelar(
         Number(req.params.id),
-        motivo_cancelamento
+        motivo_cancelamento,
+        req.empresaId!
       );
 
 
@@ -210,7 +219,8 @@ finalizar = async (req: Request, res: Response) => {
     const os =
       await this.service.pausar(
         Number(req.params.id),
-        motivo
+        motivo,
+        req.empresaId!
       );
 
 
@@ -229,7 +239,8 @@ finalizar = async (req: Request, res: Response) => {
     const os =
       await this.service.alterarPrioridade(
         Number(req.params.id),
-        prioridade
+        prioridade,
+        req.empresaId!
       );
 
 

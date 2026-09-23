@@ -9,7 +9,9 @@ import { NotificacaoSistemaService } from "../services/notificacaoSistemaService
 
 import { NotificacaoService } from "../services/NotificacaoService";
 import { PushNotificationService } from "../services/PushNotificationService";
+import { logger } from "../config/logger";
 
+const log = logger.child({ modulo: "job-preventiva" });
 
 const maquinaRepository =
     new MaquinaRepository();
@@ -44,34 +46,19 @@ const service =
     );
 
 
-console.log(
-    "🚀 Job de manutenção preventiva carregado"
-);
-
+log.info("job de manutenção preventiva carregado");
 
 cron.schedule(
     "38 19 * * *",
     async()=>{
 
-        console.log(
-            "⏰ Executando cron preventiva:",
-            new Date()
-        );
-
         try{
 
             await service.gerarOrdensPreventivas();
 
-            console.log(
-                "✅ Ordens preventivas geradas!"
-            );
-
         }catch(error){
 
-            console.error(
-                "❌ Erro ao gerar preventivas:",
-                error
-            );
+            log.error({ err: error }, "erro ao gerar preventivas");
 
         }
 

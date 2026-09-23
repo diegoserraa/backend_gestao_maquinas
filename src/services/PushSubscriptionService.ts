@@ -19,8 +19,9 @@ export class PushSubscriptionService {
     }
 
     async excluir(
-        id: number
+        id: number,
+        usuarioId: number
     ) {
-        await this.repository.excluir(id);
+        await this.repository.excluir(id, usuarioId);
     }
 }

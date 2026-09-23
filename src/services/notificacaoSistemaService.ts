@@ -1,5 +1,8 @@
 import { NotificacaoService } from "./NotificacaoService";
 import { PushNotificationService } from "./PushNotificationService";
+import { logger } from "../config/logger";
+
+const log = logger.child({ modulo: "notificacao" });
 
 export class NotificacaoSistemaService {
 
@@ -37,11 +40,7 @@ export class NotificacaoSistemaService {
 
         } catch(error) {
 
-            console.error(
-                "Erro ao enviar push para usuário:",
-                usuario_id,
-                error
-            );
+            log.error({ err: error, usuarioId: usuario_id }, "erro ao enviar push");
 
         }
 

@@ -2,7 +2,9 @@ import { MaquinaRepository } from "../repositories/MaquinaRepository";
 import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
 import { UsuarioRepository } from "../repositories/UsuarioRepository";
 import { NotificacaoSistemaService } from "./notificacaoSistemaService";
+import { logger } from "../config/logger";
 
+const log = logger.child({ modulo: "manutencao-preventiva" });
 
 export class ManutencaoPreventivaService {
 
@@ -18,37 +20,29 @@ export class ManutencaoPreventivaService {
         const hoje = new Date();
         const dataProxima =
             hoje.toISOString().split("T")[0];
-        console.log(
-            "📅 Buscando manutenção para:",
-            dataProxima
-        );
+
         const maquinas =
             await this.maquinaRepository
             .buscarPorDataProximaManutencao(
                 dataProxima
             );
-        console.log(
-            "🔎 Máquinas encontradas:",
-            maquinas.length,
-            dataProxima
-        );
+
+        log.info({ data: dataProxima, total: maquinas.length }, "varredura de preventivas");
+
         for(const maquina of maquinas){
             try {
-                console.log(
-                    "⚙️ Processando máquina:",
-                    maquina.id,
-                    maquina.nome
-                );
+                // varredura global (todas as empresas) — cada linha já
+                // carrega seu próprio empresa_id, usado daqui pra baixo
+                const empresaId: string = maquina.empresa_id;
+
                 const ordemExistente =
                     await this.ordemServicoRepository
                     .existePreventivaPendente(
-                        maquina.id
+                        maquina.id,
+                        empresaId
                     );
                 if(ordemExistente){
-                    console.log(
-                        "⚠️ Já possui preventiva pendente:",
-                        maquina.id
-                    );
+                    log.debug({ maquinaId: maquina.id }, "já tem preventiva pendente, pulando");
                     continue;
 
                 }
@@ -61,16 +55,15 @@ export class ManutencaoPreventivaService {
                         descricao:
                         "Manutenção preventiva gerada automaticamente pelo sistema."
 
-                    });
-                console.log(
-                    "✅ OS preventiva criada:",
-                    ordem.id
-                );
+                    }, empresaId);
+
+                log.info({ osId: ordem.id, maquinaId: maquina.id, empresaId }, "O.S. preventiva criada automaticamente");
+
                 const usuarios =
                     await this.usuarioRepository
-                    .buscarGestoresETecnicos();
+                    .buscarGestoresETecnicos(empresaId);
 
-                for(const usuario of usuarios){ 
+                for(const usuario of usuarios){
                     try {
                         await this.notificacaoSistemaService.notificar(
                             usuario.id,
@@ -80,24 +73,12 @@ export class ManutencaoPreventivaService {
                             `/ordens-servico/${ordem.id}`
 
                         );
-                        console.log(
-                            "🔔 Notificação enviada para:",
-                            usuario.id
-                        );
                     } catch(error){
-                        console.error(
-                            "⚠️ Erro ao notificar usuário:",
-                            usuario.id,
-                            error
-                        );
+                        log.error({ err: error, usuarioId: usuario.id, osId: ordem.id }, "erro ao notificar usuário sobre preventiva");
                     }
                 }
             } catch(error){
-                console.error(
-                    "❌ Erro ao processar máquina preventiva:",
-                    maquina.id,
-                    error
-                );
+                log.error({ err: error, maquinaId: maquina.id }, "erro ao processar máquina na varredura de preventivas");
             }
         }
     }

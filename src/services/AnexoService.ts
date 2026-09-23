@@ -20,8 +20,8 @@ export class AnexoService {
         }
     }
 
-    async buscarPorId(id: number) {
-        const anexo = await this.repository.buscarPorId(id);
+    async buscarPorId(id: number, empresaId: string) {
+        const anexo = await this.repository.buscarPorId(id, empresaId);
 
         if (!anexo) {
             throw new Error("Anexo não encontrado");
@@ -36,7 +36,8 @@ export class AnexoService {
             ordem_servico_id?: number;
             origem: "MAQUINA" | "OS_ABERTURA" | "OS_FECHAMENTO";
         },
-        file: Express.Multer.File
+        file: Express.Multer.File,
+        empresaId: string
     ) {
         const permitidos = [
             "image/jpeg",
@@ -89,19 +90,19 @@ export class AnexoService {
             tipo_arquivo: file.mimetype,
 
             origem: dados.origem
-        });
+        }, empresaId);
     }
 
-    async listarPorMaquina(maquinaId: number) {
-        return this.repository.listarPorMaquina(maquinaId);
+    async listarPorMaquina(maquinaId: number, empresaId: string) {
+        return this.repository.listarPorMaquina(maquinaId, empresaId);
     }
 
-    async listarPorOS(osId: number) {
-        return this.repository.listarPorOS(osId);
+    async listarPorOS(osId: number, empresaId: string) {
+        return this.repository.listarPorOS(osId, empresaId);
     }
 
-    async excluir(id: number) {
-        const anexo = await this.repository.buscarPorId(id);
+    async excluir(id: number, empresaId: string) {
+        const anexo = await this.repository.buscarPorId(id, empresaId);
 
         if (!anexo) {
             throw new Error("Anexo não encontrado");
@@ -115,6 +116,6 @@ export class AnexoService {
             throw new Error("Erro ao remover arquivo do bucket");
         }
 
-        await this.repository.excluir(id);
+        await this.repository.excluir(id, empresaId);
     }
 }

@@ -6,12 +6,12 @@ export class UsuarioService {
 
     private repo = new UsuarioRepository();
 
-    async listar() {
-        return this.repo.listar();
+    async listar(empresaId: string) {
+        return this.repo.listar(empresaId);
     }
 
-    async buscarPorId(id: number) {
-        const user = await this.repo.buscarPorId(id);
+    async buscarPorId(id: number, empresaId: string) {
+        const user = await this.repo.buscarPorId(id, empresaId);
 
         if (!user) {
             throw new Error("Usuário não encontrado");
@@ -20,7 +20,7 @@ export class UsuarioService {
         return user;
     }
 
-    async criar(user: IUsuario) {
+    async criar(user: IUsuario, empresaId: string) {
 
         const existe = await this.repo.buscarPorEmail(user.email);
 
@@ -32,42 +32,43 @@ export class UsuarioService {
 
         return this.repo.criar({
             ...user,
-            senha: senhaHash
+            senha: senhaHash,
+            empresa_id: empresaId
         });
     }
 
-    async atualizar(id: number, user: IUsuario) {
+    async atualizar(id: number, user: IUsuario, empresaId: string) {
 
-        const existente = await this.repo.buscarPorId(id);
-
-        if (!existente) {
-            throw new Error("Usuário não encontrado");
-        }
-
-        return this.repo.atualizar(id, user);
-    }
-
-    async excluir(id: number) {
-
-        const existente = await this.repo.buscarPorId(id);
+        const existente = await this.repo.buscarPorId(id, empresaId);
 
         if (!existente) {
             throw new Error("Usuário não encontrado");
         }
 
-        await this.repo.excluir(id);
+        return this.repo.atualizar(id, user, empresaId);
     }
-    async alternarStatus(id: number) {
 
-    const existente = await this.repo.buscarPorId(id);
+    async excluir(id: number, empresaId: string) {
+
+        const existente = await this.repo.buscarPorId(id, empresaId);
+
+        if (!existente) {
+            throw new Error("Usuário não encontrado");
+        }
+
+        await this.repo.excluir(id, empresaId);
+    }
+    async alternarStatus(id: number, empresaId: string) {
+
+    const existente = await this.repo.buscarPorId(id, empresaId);
 
     if (!existente) {
         throw new Error("Usuário não encontrado");
     }
 
-    return this.repo.alternarStatus(id, !existente.ativo);
+    return this.repo.alternarStatus(id, !existente.ativo, empresaId);
 }
-async listarTecnicos() {
-    return this.repo.listarTecnicos();
+async listarTecnicos(empresaId: string) {
+    return this.repo.listarTecnicos(empresaId);
 }
 }

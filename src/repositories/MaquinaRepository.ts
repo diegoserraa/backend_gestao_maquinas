@@ -4,16 +4,17 @@ import { IMaquina } from "../interfaces/Imaquina";
 
 export class MaquinaRepository {
 
-       async listar(): Promise<any[]> {
+       async listar(empresaId: string): Promise<any[]> {
   const { rows } = await pool.query(`
-    SELECT 
+    SELECT
       m.*,
       s.id AS setor_id_ref,
       s.nome AS setor_nome
     FROM maquinas m
     LEFT JOIN setores s ON s.id = m.setor_id
+    WHERE m.empresa_id = $1
     ORDER BY m.id
-  `);
+  `, [empresaId]);
 
   return rows.map(({
     setor_id_ref,
@@ -29,27 +30,27 @@ export class MaquinaRepository {
       : null,
   }));
 }
-    async atualizarQrCode(id: number, qrCode: string): Promise<void> {
+    async atualizarQrCode(id: number, qrCode: string, empresaId: string): Promise<void> {
 
         await pool.query(
             `UPDATE maquinas
             SET qr_code = $1
-            WHERE id = $2
-            `, [qrCode, id]
+            WHERE id = $2 AND empresa_id = $3
+            `, [qrCode, id, empresaId]
         );
     }
 
-    async buscarPorId(id: number): Promise<IMaquina | null> {
+    async buscarPorId(id: number, empresaId: string): Promise<IMaquina | null> {
 
         const { rows } = await pool.query(
-            `SELECT * FROM maquinas WHERE id = $1`,
-            [id]
+            `SELECT * FROM maquinas WHERE id = $1 AND empresa_id = $2`,
+            [id, empresaId]
         );
 
         return rows[0] ?? null;
     }
 
-    async criar(maquina: IMaquina): Promise<IMaquina> {
+    async criar(maquina: IMaquina, empresaId: string): Promise<IMaquina> {
 
         const { rows } = await pool.query(
             `
@@ -63,11 +64,12 @@ export class MaquinaRepository {
                 status,
                 intervalo_manutencao_dias,
                 ultima_manutencao,
-                proxima_manutencao
+                proxima_manutencao,
+                empresa_id
             )
             VALUES
             (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
             )
             RETURNING *
             `,
@@ -80,7 +82,8 @@ export class MaquinaRepository {
                 maquina.status,
                 maquina.intervalo_manutencao_dias,
                 maquina.ultima_manutencao,
-                maquina.proxima_manutencao
+                maquina.proxima_manutencao,
+                empresaId
             ]
         );
 
@@ -89,7 +92,8 @@ export class MaquinaRepository {
 
     async atualizar(
         id: number,
-        maquina: IMaquina
+        maquina: IMaquina,
+        empresaId: string
     ): Promise<IMaquina | null> {
 
         const { rows } = await pool.query(
@@ -105,7 +109,7 @@ export class MaquinaRepository {
                 intervalo_manutencao_dias = $7,
                 ultima_manutencao = $8,
                 proxima_manutencao = $9
-            WHERE id = $10
+            WHERE id = $10 AND empresa_id = $11
             RETURNING *
             `,
             [
@@ -118,7 +122,8 @@ export class MaquinaRepository {
                 maquina.intervalo_manutencao_dias,
                 maquina.ultima_manutencao,
                 maquina.proxima_manutencao,
-                id
+                id,
+                empresaId
             ]
         );
 
@@ -127,7 +132,8 @@ export class MaquinaRepository {
     async registrarPreventiva(
     id: number,
     ultimaManutencao: Date,
-    proximaManutencao: Date
+    proximaManutencao: Date,
+    empresaId: string
 ): Promise<IMaquina | null> {
 
     const { rows } = await pool.query(
@@ -136,67 +142,71 @@ export class MaquinaRepository {
         SET
             ultima_manutencao = $1,
             proxima_manutencao = $2
-        WHERE id = $3
+        WHERE id = $3 AND empresa_id = $4
         RETURNING *
         `,
         [
             ultimaManutencao,
             proximaManutencao,
-            id
+            id,
+            empresaId
         ]
     );
 
     return rows[0] ?? null;
 }
 
-    async excluir(id: number): Promise<void> {
+    async excluir(id: number, empresaId: string): Promise<void> {
 
         await pool.query(
-            `DELETE FROM maquinas WHERE id = $1`,
-            [id]
+            `DELETE FROM maquinas WHERE id = $1 AND empresa_id = $2`,
+            [id, empresaId]
         );
     }
-    async alternarStatus(id: number, status: string): Promise<IMaquina | null> {
+    async alternarStatus(id: number, status: string, empresaId: string): Promise<IMaquina | null> {
 
     const { rows } = await pool.query(
         `
         UPDATE maquinas
         SET status = $1
-        WHERE id = $2
+        WHERE id = $2 AND empresa_id = $3
         RETURNING *
         `,
-        [status, id]
+        [status, id, empresaId]
     );
 
     return rows[0] ?? null;
 }
-    async listarOsPorMaquina(maquinaId: number): Promise<any[]> {
+    async listarOsPorMaquina(maquinaId: number, empresaId: string): Promise<any[]> {
     const { rows } = await pool.query(
         `
         SELECT *
         FROM ordens_servico
-        WHERE maquina_id = $1
+        WHERE maquina_id = $1 AND empresa_id = $2
         ORDER BY id DESC
         `,
-        [maquinaId]
+        [maquinaId, empresaId]
     );
 
     return rows;
 }
-    async atualizarImagem(id: number, url: string | null): Promise<IMaquina | null> {
+    async atualizarImagem(id: number, url: string | null, empresaId: string): Promise<IMaquina | null> {
 
     const { rows } = await pool.query(
         `
         UPDATE maquinas
         SET imagem_url = $1
-        WHERE id = $2
+        WHERE id = $2 AND empresa_id = $3
         RETURNING *
         `,
-        [url, id]
+        [url, id, empresaId]
     );
 
     return rows[0] ?? null;
 }
+// Usada pelo cron de manutenção preventiva, que roda sem contexto de
+// requisição — varre TODAS as empresas de propósito (sem filtro), e cada
+// linha retornada já carrega seu próprio empresa_id pra quem chamar usar.
 async buscarPorDataProximaManutencao(
     data: string
 ){

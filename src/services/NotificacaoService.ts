@@ -60,11 +60,13 @@ export class NotificacaoService {
 
 
     async marcarComoLida(
-        id:number
+        id:number,
+        usuarioId:number
     ){
 
         return this.repository.marcarComoLida(
-            id
+            id,
+            usuarioId
         );
 
     }
@@ -84,11 +86,13 @@ export class NotificacaoService {
 
 
     async excluir(
-        id:number
+        id:number,
+        usuarioId:number
     ){
 
         return this.repository.excluir(
-            id
+            id,
+            usuarioId
         );
 
     }
