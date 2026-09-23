@@ -48,6 +48,12 @@ export class MonitoramentoService {
     }
 
     async salvarParametros(maquinaId: number, lista: IMaquinaParametro[], empresaId: string) {
+        // a máquina precisa ser da empresa de quem chama — senão o upsert
+        // (que casa por maquina_id + chave) reescreveria limites de outra empresa
+        if ((await this.repo.empresaDaMaquina(maquinaId)) !== empresaId) {
+            throw new Error("Máquina não encontrada");
+        }
+
         const salvos: IMaquinaParametro[] = [];
         for (const p of lista) {
             salvos.push(await this.repo.upsertParametro({

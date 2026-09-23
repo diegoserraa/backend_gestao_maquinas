@@ -1,8 +1,28 @@
 import { supabase } from "../config/supabase";
 import { AnexoRepository } from "../repositories/AnexoRepository";
+import { MaquinaRepository } from "../repositories/MaquinaRepository";
+import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
 
 export class AnexoService {
     private repository = new AnexoRepository();
+    private maquinaRepository = new MaquinaRepository();
+    private ordemServicoRepository = new OrdemServicoRepository();
+
+    // o anexo só pode apontar pra máquina/O.S. da mesma empresa
+    private async validarAlvo(
+        dados: { maquina_id?: number; ordem_servico_id?: number },
+        empresaId: string
+    ) {
+        if (dados.maquina_id != null) {
+            const m = await this.maquinaRepository.buscarPorId(Number(dados.maquina_id), empresaId);
+            if (!m) throw new Error("Máquina não encontrada");
+        }
+
+        if (dados.ordem_servico_id != null) {
+            const os = await this.ordemServicoRepository.buscarPorId(Number(dados.ordem_servico_id), empresaId);
+            if (!os) throw new Error("Ordem de serviço não encontrada");
+        }
+    }
 
     private montarPasta(origem: string, dados: any) {
         switch (origem) {
@@ -55,6 +75,8 @@ export class AnexoService {
         if (!permitidos.includes(file.mimetype)) {
             throw new Error("Tipo de arquivo não permitido");
         }
+
+        await this.validarAlvo(dados, empresaId);
 
         const ext = file.originalname.split(".").pop();
 

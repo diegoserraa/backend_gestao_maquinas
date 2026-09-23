@@ -33,6 +33,7 @@ export class MonitoramentoRepository {
                 abrir_os_auto = EXCLUDED.abrir_os_auto,
                 ativo = EXCLUDED.ativo,
                 atualizado_em = now()
+            WHERE maquina_parametros.empresa_id = EXCLUDED.empresa_id
             RETURNING *
             `,
             [

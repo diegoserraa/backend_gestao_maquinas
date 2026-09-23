@@ -34,6 +34,19 @@ export class OrdemServicoService {
     return os;
   }
 
+  // Um id vindo do cliente (máquina, técnico...) só vale se for da mesma
+  // empresa — senão dá pra "encostar" um registro seu no dado de outra empresa.
+  private async validarMaquina(maquinaId: number, empresaId: string) {
+    const maquina = await this.maquinaRepository.buscarPorId(maquinaId, empresaId);
+    if (!maquina) throw new Error("Máquina não encontrada");
+  }
+
+  private async validarUsuario(usuarioId: number | null | undefined, empresaId: string) {
+    if (usuarioId == null) return;
+    const usuario = await this.usuarioRepository.buscarPorId(usuarioId, empresaId);
+    if (!usuario) throw new Error("Usuário não encontrado");
+  }
+
   private validarTransicao(statusAtual: string, statusNovo: string) {
 
     if (!TRANSICOES[statusAtual]?.includes(statusNovo)) {
@@ -55,6 +68,10 @@ export class OrdemServicoService {
   // Operador abre OS
 // Operador abre OS
 async criar(dados:IOrdemServico, empresaId: string) {
+
+  await this.validarMaquina(dados.maquina_id, empresaId);
+  await this.validarUsuario(dados.id_solicitante, empresaId);
+  await this.validarUsuario(dados.id_tecnico, empresaId);
 
   const ordem =
     await this.repo.criar({
@@ -150,6 +167,8 @@ async criar(dados:IOrdemServico, empresaId: string) {
   ){
 
     const os = await this.buscarOuFalhar(id, empresaId);
+
+    await this.validarUsuario(id_tecnico, empresaId);
 
     this.validarTransicao(
       os.status,

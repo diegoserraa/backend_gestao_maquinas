@@ -1,11 +1,19 @@
 import { IMaquina } from "../interfaces/Imaquina";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
+import { SetorRepository } from "../repositories/SetorRepository";
 import { supabase } from "../config/supabase";
 import QRCode from "qrcode";
 
 export class MaquinaService {
 
     private repository = new MaquinaRepository();
+    private setorRepository = new SetorRepository();
+
+    private async validarSetor(setorId: number | undefined, empresaId: string) {
+        if (setorId == null) return;
+        const setor = await this.setorRepository.buscarPorId(Number(setorId), empresaId);
+        if (!setor) throw new Error("Setor não encontrado");
+    }
 
     async listar(empresaId: string) {
         return this.repository.listar(empresaId);
@@ -23,6 +31,8 @@ export class MaquinaService {
 
     // 🔥 AGORA COM IMAGEM
   async criar(maquina: IMaquina, empresaId: string, file?: Express.Multer.File) {
+
+    await this.validarSetor(maquina.setor_id, empresaId);
 
      // 1. calcula próxima manutenção
     if (
@@ -108,6 +118,9 @@ export class MaquinaService {
     if (!existente) {
         throw new Error("Máquina não encontrada");
     }
+
+    await this.validarSetor(maquina.setor_id, empresaId);
+
       // 1. recalcula próxima manutenção
     const ultimaManutencao =
         maquina.ultima_manutencao ??
