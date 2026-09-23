@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
 import { DashboardController } from "../controllers/DashboardController";
 import { roleMiddleware } from "../middlewares/role.Middleware";
 import { Role } from "../enums/Role";
 
 const dashboardRoutes = Router();
+protegerParamsNumericos(dashboardRoutes);
 
 const dashboardController = new DashboardController();
 const apenasAdminGestor = roleMiddleware(Role.ADMIN, Role.GESTOR);

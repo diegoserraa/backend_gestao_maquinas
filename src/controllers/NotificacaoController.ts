@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { NotificacaoService } from "../services/NotificacaoService";
+import { UsuarioRepository } from "../repositories/UsuarioRepository";
 
 
 export class NotificacaoController {
@@ -85,6 +86,18 @@ export class NotificacaoController {
         res:Response
     )=>{
 
+        // o destinatário precisa ser da mesma empresa de quem envia
+        const destinatario =
+            await new UsuarioRepository().buscarPorId(
+                req.body.usuario_id,
+                req.empresaId!
+            );
+
+        if(!destinatario){
+            return res.status(400).json({
+                message: "Usuário não encontrado"
+            });
+        }
 
         const notificacao =
             await this.service.criar(

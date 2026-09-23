@@ -120,27 +120,25 @@ indicadoresPorMaquina = async (
 
   atribuir = async (req: Request, res: Response) => {
 
-    const {
-      id_tecnico,
-      id_atribuido_por
-    } = req.body;
+    // quem atribuiu é sempre quem está logado (o corpo já é validado por zod)
+    if(req.body.externo){
 
+      const externa =
+        await this.service.atribuirExterno(
+          Number(req.params.id),
+          req.user!.id,
+          req.empresaId!
+        );
 
-    if(!id_tecnico || !id_atribuido_por){
-
-      return res.status(400).json({
-        error:
-        "id_tecnico e id_atribuido_por são obrigatórios"
-      });
+      return res.json(externa);
 
     }
-
 
     const os =
       await this.service.atribuir(
         Number(req.params.id),
-        Number(id_tecnico),
-        Number(id_atribuido_por),
+        req.body.id_tecnico,
+        req.user!.id,
         req.empresaId!
       );
 

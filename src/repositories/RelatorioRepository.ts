@@ -185,7 +185,11 @@ export class RelatorioRepository {
 
           os.prioridade,
 
-          tecnico.nome AS tecnico_nome,
+          CASE
+            WHEN os.execucao_externa THEN
+              'Externo' || COALESCE(' - ' || parceiro.nome, '')
+            ELSE tecnico.nome
+          END AS tecnico_nome,
 
           solicitante.nome AS solicitante_nome,
 
@@ -221,6 +225,11 @@ export class RelatorioRepository {
 
         LEFT JOIN usuarios tecnico
           ON tecnico.id = os.id_tecnico
+
+
+        LEFT JOIN parceiros parceiro
+          ON parceiro.id = os.id_parceiro
+         AND parceiro.empresa_id = os.empresa_id
 
 
         LEFT JOIN usuarios solicitante

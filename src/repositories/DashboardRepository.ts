@@ -508,7 +508,7 @@ async obterPreventivasVencidas(
 
 
 
-        WHERE os.status='FINALIZADA' and os.id_tecnico <> 7
+        WHERE os.status='FINALIZADA' AND os.execucao_externa = false
         AND os.empresa_id = $1
 
 

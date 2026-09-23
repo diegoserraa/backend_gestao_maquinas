@@ -3,6 +3,7 @@ import { UsuarioRepository } from "../repositories/UsuarioRepository";
 import { NotificacaoSistemaService } from "./notificacaoSistemaService";
 import { IOrdemServico } from "../interfaces/IordemServico";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
+import { ParceiroRepository } from "../repositories/ParceiroRepository";
 import { logger } from "../config/logger";
 
 const log = logger.child({ modulo: "ordem-servico" });
@@ -15,6 +16,8 @@ const TRANSICOES: Record<string, string[]> = {
 };
 
 export class OrdemServicoService {
+
+  private parceiroRepository = new ParceiroRepository();
 
  constructor(
   private repo: OrdemServicoRepository,
@@ -211,6 +214,34 @@ async criar(dados:IOrdemServico, empresaId: string) {
   }
 
 
+  // Gestor marca a O.S. como executada por parceiro externo: não existe
+  // técnico de verdade, então id_tecnico fica vazio e ninguém é notificado.
+  async atribuirExterno(
+    id:number,
+    id_atribuido_por:number,
+    empresaId: string
+  ){
+
+    const os = await this.buscarOuFalhar(id, empresaId);
+
+    this.validarTransicao(
+      os.status,
+      "ATRIBUIDA"
+    );
+
+    log.info({ osId: id, atribuidoPor: id_atribuido_por, empresaId }, "O.S. marcada como execução externa");
+
+    return this.repo.patch(id,{
+      execucao_externa:true,
+      id_tecnico:null,
+      id_atribuido_por,
+      data_atribuicao:new Date().toISOString(),
+      status:"ATRIBUIDA"
+    }, empresaId);
+
+  }
+
+
   // Técnico inicia atendimento
   async iniciar(id:number, empresaId: string){
 
@@ -257,6 +288,31 @@ async finalizar(
   if ((valor_gasto ?? 0) < 0) {
     throw new Error(
       "Valor gasto não pode ser negativo"
+    );
+  }
+
+  // parceiro só faz sentido (e é obrigatório) em O.S. de execução externa
+  if (os.execucao_externa) {
+
+    if (!id_parceiro) {
+      throw new Error(
+        "Informe o parceiro que executou a O.S. externa"
+      );
+    }
+
+    const parceiro =
+      await this.parceiroRepository.buscarPorId(
+        id_parceiro,
+        empresaId
+      );
+
+    if (!parceiro) {
+      throw new Error("Parceiro não encontrado");
+    }
+
+  } else if (id_parceiro || valor_parceiro) {
+    throw new Error(
+      "Parceiro só pode ser informado em O.S. de execução externa"
     );
   }
 

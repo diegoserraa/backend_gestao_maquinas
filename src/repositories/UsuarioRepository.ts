@@ -52,7 +52,7 @@ export class UsuarioRepository {
             SET nome = $1,
                 email = $2,
                 role = $3,
-                ativo = $4
+                ativo = COALESCE($4, ativo)
             WHERE id = $5 AND empresa_id = $6
             RETURNING id, nome, email, role, ativo, created_at
             `,
@@ -100,6 +100,7 @@ async buscarGestoresETecnicos(empresaId: string) {
         SELECT id, role
         FROM usuarios
         WHERE role IN ('GESTOR', 'TECNICO')
+          AND ativo = true
           AND empresa_id = $1
         `,
         [empresaId]

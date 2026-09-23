@@ -1,8 +1,11 @@
 import { Router } from "express";
+import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
+import { anexoUploadSchema } from "../schemas/anexo";
 import { AnexoController } from "../controllers/AnexoController";
 import { upload } from "../middlewares/uploadMiddleware";
 
 const anexoRoutes = Router();
+protegerParamsNumericos(anexoRoutes);
 
 const controller =
     new AnexoController();
@@ -25,6 +28,7 @@ anexoRoutes.get(
 anexoRoutes.post(
     "/upload",
     upload.single("arquivo"),
+    validarBody(anexoUploadSchema),
     controller.upload
 );
 

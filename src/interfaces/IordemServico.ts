@@ -8,9 +8,10 @@ export interface IOrdemServico {
   resolucao?: string;
   data_resolucao?: string;
   prioridade?: string;
-  id_tecnico?: number;
+  id_tecnico?: number | null;
   valor_gasto?: number;
   id_parceiro?: number | null;
+  execucao_externa?: boolean;
 
   valor_parceiro?: number | null;
 

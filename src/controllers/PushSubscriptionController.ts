@@ -11,8 +11,12 @@ export class PushSubscriptionController {
         res: Response
     ) => {
 
+        // o dono é sempre quem está logado — antes vinha do corpo
         const subscription =
-            await this.service.criar(req.body);
+            await this.service.criar({
+                ...req.body,
+                usuario_id: req.user!.id
+            });
 
         return res.status(201).json(subscription);
     };

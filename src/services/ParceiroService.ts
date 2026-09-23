@@ -28,9 +28,9 @@ export class ParceiroService {
     if (existente) {
         throw new Error("Já existe um parceiro com este CNPJ.");
     }
+}
 
     return this.repository.criar(parceiro, empresaId);
-}
 }
 
     async atualizar(

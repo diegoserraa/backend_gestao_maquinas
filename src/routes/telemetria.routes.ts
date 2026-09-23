@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
 import { TelemetriaController } from "../controllers/TelemetriaController";
 
 const telemetriaRoutes = Router();
+protegerParamsNumericos(telemetriaRoutes);
 
 const telemetriaController = new TelemetriaController();
 
