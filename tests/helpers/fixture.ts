@@ -31,12 +31,22 @@ export interface Lado {
   marcador: string;
 }
 
+export interface UsuarioTeste {
+  id: number;
+  nome: string;
+  email: string;
+  role: string;
+  token: string;
+}
+
 export interface Fixture {
   A: Lado;
   B: Lado;
 }
 
 const TABELAS_POR_EMPRESA = [
+  "auditoria_permissoes",
+  "usuario_permissoes",
   "telemetria_alertas",
   "telemetria_alerta_estado",
   "telemetria_atual",
@@ -140,6 +150,37 @@ async function criarLado(letra: "A" | "B", hash: string): Promise<Lado> {
   };
 }
 
+/**
+ * Cria um funcionário de teste numa das empresas.
+ * - `permissoes` informado: fica exatamente com essa lista (já "inicializado", sem padrão automático);
+ * - omitido: fica sem inicializar, e o backend aplica o padrão do tipo na primeira requisição.
+ */
+export async function criarUsuarioTeste(
+  lado: Lado,
+  opcoes: { role: string; permissoes?: string[]; ativo?: boolean }
+): Promise<UsuarioTeste> {
+  const sufixo = Math.random().toString(36).slice(2, 9);
+  const nome = `${lado.marcador}_${opcoes.role.toLowerCase()}_${sufixo}`;
+  const email = `${nome.toLowerCase()}@vitest.local`;
+
+  const r = await pool.query(
+    `INSERT INTO usuarios (nome, email, senha, role, empresa_id, ativo, permissoes_inicializadas)
+     VALUES ($1,$2,'x',$3,$4,$5,$6) RETURNING id`,
+    [nome, email, opcoes.role, lado.empresaId, opcoes.ativo ?? true, opcoes.permissoes !== undefined]
+  );
+  const id: number = r.rows[0].id;
+
+  if (opcoes.permissoes && opcoes.permissoes.length > 0) {
+    await pool.query(
+      `INSERT INTO usuario_permissoes (usuario_id, permissao, empresa_id)
+       SELECT $1, p, $3 FROM unnest($2::text[]) AS p`,
+      [id, opcoes.permissoes, lado.empresaId]
+    );
+  }
+
+  return { id, nome, email, role: opcoes.role, token: token(id, opcoes.role, lado.empresaId) };
+}
+
 /** Apaga qualquer resto de execuções anteriores que tenham quebrado no meio. */
 export async function limparTudo(): Promise<void> {
   const { rows } = await pool.query(
@@ -149,10 +190,20 @@ export async function limparTudo(): Promise<void> {
   const ids = rows.map((r) => r.id);
   if (ids.length === 0) return;
 
-  for (const t of TABELAS_POR_EMPRESA) {
-    await pool.query(`DELETE FROM ${t} WHERE empresa_id = ANY($1::uuid[])`, [ids]);
+  // Tarefas assíncronas do app (motor de alertas, notificações) podem gravar alguma linha
+  // enquanto limpamos; se isso causar conflito de chave, é só repetir a limpeza.
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      for (const t of TABELAS_POR_EMPRESA) {
+        await pool.query(`DELETE FROM ${t} WHERE empresa_id = ANY($1::uuid[])`, [ids]);
+      }
+      await pool.query(`DELETE FROM empresas WHERE id = ANY($1::uuid[])`, [ids]);
+      return;
+    } catch (erro: any) {
+      if (tentativa >= 4 || erro?.code !== "23503") throw erro;
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
-  await pool.query(`DELETE FROM empresas WHERE id = ANY($1::uuid[])`, [ids]);
 }
 
 export async function criarFixture(): Promise<Fixture> {

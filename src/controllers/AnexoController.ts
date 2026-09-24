@@ -1,5 +1,18 @@
 import { Request, Response } from "express";
 import { AnexoService } from "../services/AnexoService";
+import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
+import { escopoOS } from "../middlewares/permissao";
+
+const osRepo = new OrdemServicoRepository();
+
+// quem só vê "as minhas O.S." não alcança anexos das dos outros
+async function osAcessivel(req: Request, osId: number): Promise<boolean> {
+    if (escopoOS(req) !== "proprias") return true;
+
+    const os = await osRepo.buscarPorId(osId, req.empresaId!);
+
+    return !os || os.id_solicitante === req.user!.id || os.id_tecnico === req.user!.id;
+}
 
 export class AnexoController {
     private service = new AnexoService();
@@ -29,6 +42,8 @@ export class AnexoController {
 
     listarPorOS = async (req: Request, res: Response) => {
         const osId = Number(req.params.id);
+
+        if (!(await osAcessivel(req, osId))) return res.json([]);
 
         const anexos = await this.service.listarPorOS(osId, req.empresaId!);
 

@@ -218,7 +218,7 @@ export class MaquinaService {
         return this.repository.alternarStatus(id, novoStatus, empresaId);
     }
 
-    async listarOsPorMaquina(maquinaId: number, empresaId: string) {
+    async listarOsPorMaquina(maquinaId: number, empresaId: string, apenasDoUsuario: number | null = null) {
 
         const maquina =
             await this.repository.buscarPorId(maquinaId, empresaId);
@@ -227,7 +227,7 @@ export class MaquinaService {
             throw new Error("Máquina não encontrada");
         }
 
-        return this.repository.listarOsPorMaquina(maquinaId, empresaId);
+        return this.repository.listarOsPorMaquina(maquinaId, empresaId, apenasDoUsuario);
     }
     private calcularProximaManutencao(
     ultimaManutencao: string | Date,

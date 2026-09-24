@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { UsuarioService } from "../services/UsuarioService";
+import { atorDe } from "../middlewares/permissao";
 
 export class UsuarioController {
 
@@ -17,30 +18,30 @@ export class UsuarioController {
     };
 
     criar = async (req: Request, res: Response) => {
-        const user = await this.service.criar(req.body, req.empresaId!);
+        const user = await this.service.criar(req.body, req.empresaId!, atorDe(req));
         return res.status(201).json(user);
     };
 
     atualizar = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
-        const user = await this.service.atualizar(id, req.body, req.empresaId!);
+        const user = await this.service.atualizar(id, req.body, req.empresaId!, atorDe(req));
         return res.json(user);
     };
 
     excluir = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
-        await this.service.excluir(id, req.empresaId!);
+        await this.service.excluir(id, req.empresaId!, atorDe(req));
         return res.sendStatus(204);
     };
+
     alternarStatus = async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
+        const id = Number(req.params.id);
+        const user = await this.service.alternarStatus(id, req.empresaId!, atorDe(req));
+        return res.json(user);
+    };
 
-    const user = await this.service.alternarStatus(id, req.empresaId!);
-
-    return res.json(user);
-};
-listarTecnicos = async (req: Request, res: Response) => {
-    const tecnicos = await this.service.listarTecnicos(req.empresaId!);
-    return res.json(tecnicos);
-};
+    listarTecnicos = async (req: Request, res: Response) => {
+        const tecnicos = await this.service.listarTecnicos(req.empresaId!);
+        return res.json(tecnicos);
+    };
 }

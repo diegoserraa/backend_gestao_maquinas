@@ -4,13 +4,20 @@ import { Pagina } from "../utils/paginacao";
 
 export class OrdemServicoRepository {
 
-  async listar(empresaId: string, { limite, offset }: Pagina): Promise<{ itens: IOrdemServico[]; total: number }> {
+  // apenasDoUsuario: só as O.S. que ele abriu ou que são dele (permissão "ver só as minhas")
+  async listar(
+    empresaId: string,
+    { limite, offset }: Pagina,
+    apenasDoUsuario: number | null = null
+  ): Promise<{ itens: IOrdemServico[]; total: number }> {
+    const filtro = `empresa_id = $1 AND ($2::int IS NULL OR id_solicitante = $2 OR id_tecnico = $2)`;
+
     const [lista, contagem] = await Promise.all([
       pool.query(
-        `SELECT * FROM ordens_servico WHERE empresa_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3`,
-        [empresaId, limite, offset]
+        `SELECT * FROM ordens_servico WHERE ${filtro} ORDER BY id DESC LIMIT $3 OFFSET $4`,
+        [empresaId, apenasDoUsuario, limite, offset]
       ),
-      pool.query(`SELECT COUNT(*)::int AS n FROM ordens_servico WHERE empresa_id = $1`, [empresaId]),
+      pool.query(`SELECT COUNT(*)::int AS n FROM ordens_servico WHERE ${filtro}`, [empresaId, apenasDoUsuario]),
     ]);
     return { itens: lista.rows, total: contagem.rows[0].n };
   }

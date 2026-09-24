@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import { router } from "./routes";
 import { authRoutes } from "./routes/auth.routes";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { carregarPerfil } from "./middlewares/permissao";
 import { apiLimiter, loginLimiter } from "./middlewares/rateLimitMiddleware";
 import { logger } from "./config/logger";
 
@@ -66,6 +67,10 @@ app.use(apiLimiter);
 app.use("/auth", loginLimiter, authRoutes);
 
 app.use(authMiddleware);
+
+// depois do token válido: carrega o perfil (cache em memória), barra usuário
+// desativado/apagado na hora e disponibiliza req.permissoes pras rotas.
+app.use(carregarPerfil);
 
 app.use(router);
 

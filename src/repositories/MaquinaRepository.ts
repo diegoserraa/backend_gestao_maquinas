@@ -182,15 +182,16 @@ export class MaquinaRepository {
 
     return rows[0] ?? null;
 }
-    async listarOsPorMaquina(maquinaId: number, empresaId: string): Promise<any[]> {
+    async listarOsPorMaquina(maquinaId: number, empresaId: string, apenasDoUsuario: number | null = null): Promise<any[]> {
     const { rows } = await pool.query(
         `
         SELECT *
         FROM ordens_servico
         WHERE maquina_id = $1 AND empresa_id = $2
+          AND ($3::int IS NULL OR id_solicitante = $3 OR id_tecnico = $3)
         ORDER BY id DESC
         `,
-        [maquinaId, empresaId]
+        [maquinaId, empresaId, apenasDoUsuario]
     );
 
     return rows;

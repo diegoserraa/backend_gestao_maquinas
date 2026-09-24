@@ -61,8 +61,8 @@ export class OrdemServicoService {
 
   }
 
-  async listar(empresaId: string, pagina: Pagina) {
-    return this.repo.listar(empresaId, pagina);
+  async listar(empresaId: string, pagina: Pagina, apenasDoUsuario: number | null = null) {
+    return this.repo.listar(empresaId, pagina, apenasDoUsuario);
   }
 
   async buscarPorId(id:number, empresaId: string) {

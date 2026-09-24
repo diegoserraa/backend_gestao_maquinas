@@ -4,6 +4,20 @@ import { logger } from "../config/logger";
 
 const log = logger.child({ modulo: "notificacao" });
 
+// Quantos destinatários são notificados ao mesmo tempo (o pool do banco tem 10 conexões).
+const CONCORRENCIA = 10;
+
+/** Executa as tarefas em lotes; a falha de uma não impede as outras. */
+async function emLotes(tarefas: Array<() => Promise<void>>): Promise<void> {
+    for (let i = 0; i < tarefas.length; i += CONCORRENCIA) {
+        const resultados = await Promise.allSettled(tarefas.slice(i, i + CONCORRENCIA).map((t) => t()));
+
+        for (const r of resultados) {
+            if (r.status === "rejected") log.error({ err: r.reason }, "falha ao notificar um destinatário");
+        }
+    }
+}
+
 export class NotificacaoSistemaService {
 
     constructor(
@@ -79,29 +93,18 @@ async notificarOSCriada(
     const mensagem =
         `Foi aberta uma nova OS para maquina ${maquina_nome}.`;
 
-    for(const gestor_id of gestores_ids){
+    const url = `/ordens-servico/${ordem_id}`;
 
-        await this.enviar(
-            gestor_id,
-            "Nova ordem de serviço",
-            mensagem,
-            "OS_CRIADA",
-            `/ordens-servico/${ordem_id}`
-        );
-
-    }
-
-    for(const tecnico_id of tecnicos_ids){
-
-        await this.enviar(
-            tecnico_id,
-            "Nova manutenção disponível",
-            mensagem,
-            "OS_DISPONIVEL",
-            `/ordens-servico/${ordem_id}`
-        );
-
-    }
+    // em paralelo (em lotes): uma empresa com dezenas de usuários não pode deixar
+    // quem abre a O.S. esperando uma notificação por vez
+    await emLotes([
+        ...gestores_ids.map((id) => () =>
+            this.enviar(id, "Nova ordem de serviço", mensagem, "OS_CRIADA", url)
+        ),
+        ...tecnicos_ids.map((id) => () =>
+            this.enviar(id, "Nova manutenção disponível", mensagem, "OS_DISPONIVEL", url)
+        ),
+    ]);
 
 }
 

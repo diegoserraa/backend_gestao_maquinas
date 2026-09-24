@@ -1,21 +1,22 @@
 import { Router } from "express";
 import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
+import { exigir, exigirQualquer } from "../middlewares/permissao";
+import { LEITURA_DE_APOIO } from "../permissoes/catalogo";
 import { parceiroSchema } from "../schemas/cadastros";
 import { ParceiroController } from "../controllers/ParceiroController";
-import { roleMiddleware } from "../middlewares/role.Middleware";
-import { Role } from "../enums/Role";
 
 const parceiroRoutes = Router();
 protegerParamsNumericos(parceiroRoutes);
 
-const parceiroController =
-    new ParceiroController();
-const apenasAdminGestor = roleMiddleware(Role.ADMIN, Role.GESTOR);
+const parceiroController = new ParceiroController();
 
-parceiroRoutes.get("/", parceiroController.listar);
-parceiroRoutes.get("/:id",parceiroController.buscarPorId);
-parceiroRoutes.post("/", apenasAdminGestor, validarBody(parceiroSchema), parceiroController.criar);
-parceiroRoutes.put("/:id", apenasAdminGestor, validarBody(parceiroSchema), parceiroController.atualizar);
-parceiroRoutes.delete("/:id", apenasAdminGestor, parceiroController.excluir);
+// parceiros aparecem ao finalizar uma O.S. externa e nos relatórios: leitura de apoio
+const lerParceiros = exigirQualquer(LEITURA_DE_APOIO.parceiros);
+
+parceiroRoutes.get("/", lerParceiros, parceiroController.listar);
+parceiroRoutes.get("/:id", lerParceiros, parceiroController.buscarPorId);
+parceiroRoutes.post("/", exigir("parceiros.criar"), validarBody(parceiroSchema), parceiroController.criar);
+parceiroRoutes.put("/:id", exigir("parceiros.editar"), validarBody(parceiroSchema), parceiroController.atualizar);
+parceiroRoutes.delete("/:id", exigir("parceiros.excluir"), parceiroController.excluir);
 
 export { parceiroRoutes };

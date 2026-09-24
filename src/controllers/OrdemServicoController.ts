@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { lerPagina, responderPagina } from "../utils/paginacao";
+import { escopoOS, pode } from "../middlewares/permissao";
 
 import { OrdemServicoService } from "../services/OrdemServicoService";
 import { OrdemServicoRepository } from "../repositories/OrdemServicoRepository";
@@ -46,7 +47,8 @@ export class OrdemServicoController {
     const { itens, total } =
       await this.service.listar(
         req.empresaId!,
-        lerPagina(req, { padrao: 500, maximo: 1000 })
+        lerPagina(req, { padrao: 500, maximo: 1000 }),
+        escopoOS(req) === "proprias" ? req.user!.id : null
       );
 
     return responderPagina(res, itens, total);
@@ -69,15 +71,12 @@ export class OrdemServicoController {
 
   criar = async (req: Request, res: Response) => {
 
-    const { id, role } = req.user!;
-    const ehGestor = role === "ADMIN" || role === "GESTOR";
-
-    // solicitante é sempre quem está logado; escolher técnico já na abertura
-    // é do gestor (operador/técnico abrem a O.S. e o gestor atribui depois)
+    // solicitante é sempre quem está logado; escolher o técnico já na abertura
+    // exige a permissão de atribuir (quem só abre a O.S. deixa isso pro gestor)
     const dados = {
       ...req.body,
-      id_solicitante: id,
-      id_tecnico: ehGestor ? req.body.id_tecnico : undefined
+      id_solicitante: req.user!.id,
+      id_tecnico: pode(req, "os.atribuir") ? req.body.id_tecnico : undefined
     };
 
     const os =
@@ -123,9 +122,19 @@ indicadoresPorMaquina = async (
   res: Response
 ) => {
 
+  // indicadores somam as O.S. de toda a empresa: sem "ver todas", devolve zerado
+  if (escopoOS(req) !== "todas") {
+    return res.json({
+      osAbertas: 0,
+      mttrSegundos: null,
+      mtbfSegundos: null,
+      tempoAtendimentoSegundos: null,
+    });
+  }
+
   const indicadores =
     await this.service.indicadoresPorMaquina(
-      Number(req.params.id),
+      Number(req.params.maquinaId),
       req.empresaId!
     );
 

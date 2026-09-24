@@ -1,10 +1,12 @@
-import type { Server as HttpServer } from "http";
+import type { IncomingMessage, Server as HttpServer } from "http";
+import type { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 import { TelemetriaService } from "../services/TelemetriaService";
 import { registrarWss } from "./wsBus";
 import { TokenPayload } from "../types/auth";
 import { logger } from "../config/logger";
+import { permissaoService } from "../services/PermissaoService";
 
 const log = logger.child({ modulo: "ws-telemetria" });
 
@@ -47,6 +49,41 @@ function autenticar(url: string): TokenPayload | null {
     }
 }
 
+async function aceitar(req: IncomingMessage, socket: Duplex, head: Buffer, url: string): Promise<void> {
+    const payload = autenticar(url);
+
+    if (!payload) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+    }
+
+    // mesma regra da API: usuário ativo e com acesso ao Monitoramento
+    const perfil = await permissaoService.perfil(payload.id).catch(() => null);
+
+    if (!perfil || !perfil.ativo || perfil.empresaId !== payload.empresa_id) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+    }
+
+    if (!perfil.permissoes.has("monitoramento.ver")) {
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        socket.destroy();
+        return;
+    }
+
+    if ((wss as WebSocketServer).clients.size >= MAX_CLIENTES) {
+        socket.destroy();
+        return;
+    }
+
+    (wss as WebSocketServer).handleUpgrade(req, socket, head, (ws) => {
+        (ws as ClienteWS).empresaId = payload.empresa_id;
+        (wss as WebSocketServer).emit("connection", ws, req);
+    });
+}
+
 export function initTelemetriaRealtime(server: HttpServer): void {
     wss = new WebSocketServer({ noServer: true });
     registrarWss(wss);
@@ -59,22 +96,7 @@ export function initTelemetriaRealtime(server: HttpServer): void {
             return;
         }
 
-        const payload = autenticar(url);
-        if (!payload) {
-            socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-            socket.destroy();
-            return;
-        }
-
-        if ((wss as WebSocketServer).clients.size >= MAX_CLIENTES) {
-            socket.destroy();
-            return;
-        }
-
-        (wss as WebSocketServer).handleUpgrade(req, socket, head, (ws) => {
-            (ws as ClienteWS).empresaId = payload.empresa_id;
-            (wss as WebSocketServer).emit("connection", ws, req);
-        });
+        void aceitar(req, socket, head, url);
     });
 
     wss.on("connection", async (ws: ClienteWS) => {

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { lerPagina, responderPagina } from "../utils/paginacao";
+import { escopoOS } from "../middlewares/permissao";
 import { MaquinaService } from "../services/MaquinaService";
 
 export class MaquinaController {
@@ -97,7 +98,12 @@ criar = async (req: Request, res: Response) => {
 listarOsPorMaquina = async (req: Request, res: Response) => {
     const id = Number(req.params.id);
 
-    const os = await this.service.listarOsPorMaquina(id, req.empresaId!);
+    // sem permissão de ver O.S. a lista vem vazia; com "só as minhas", filtrada
+    const escopo = escopoOS(req);
+
+    const os = escopo
+        ? await this.service.listarOsPorMaquina(id, req.empresaId!, escopo === "proprias" ? req.user!.id : null)
+        : [];
 
     return res.json(os);
 };

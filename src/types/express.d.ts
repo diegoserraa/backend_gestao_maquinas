@@ -9,6 +9,8 @@ declare global {
             user?: TokenPayload;
             /** Atalho pra req.user.empresa_id, já pronto pro filtro de tenant. */
             empresaId?: string;
+            /** Permissões do usuário logado (preenchido pelo carregarPerfil; ADMIN tem todas). */
+            permissoes?: ReadonlySet<string>;
         }
     }
 }

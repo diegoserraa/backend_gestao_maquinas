@@ -25,6 +25,8 @@ export const apiLimiter = rateLimit({
     limit: 300,
     standardHeaders: true,
     legacyHeaders: false,
+    // os testes automatizados fazem centenas de chamadas por minuto de um único IP
+    skip: () => process.env.NODE_ENV === "test",
     handler: logBloqueio("api"),
 });
 

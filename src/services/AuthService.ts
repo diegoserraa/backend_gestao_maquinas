@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { UsuarioRepository } from "../repositories/UsuarioRepository";
 import { logger } from "../config/logger";
+import { permissaoService } from "./PermissaoService";
+import { invalido } from "../utils/erros";
 
 export class AuthService {
 
@@ -25,6 +27,11 @@ export class AuthService {
             throw new Error("Usuário ou senha inválidos");
         }
 
+        if (user.ativo === false) {
+            logger.warn({ email, userId: user.id }, "login recusado: usuário inativo");
+            throw invalido("Usuário inativo. Fale com o gestor da sua empresa.");
+        }
+
         logger.info({ email, userId: user.id, empresaId: user.empresa_id }, "login bem-sucedido");
 
         const JWT_SECRET = process.env.JWT_SECRET!;
@@ -40,6 +47,9 @@ export class AuthService {
             }
         );
 
+        // as permissões já vêm no login: o front monta menus e botões sem uma segunda chamada
+        const perfil = await permissaoService.perfil(user.id as number);
+
         return {
             token,
             user: {
@@ -48,7 +58,8 @@ export class AuthService {
                 email: user.email,
                 role: user.role,
                 empresa_id: user.empresa_id
-            }
+            },
+            permissoes: [...(perfil?.permissoes ?? [])]
         };
     }
 }

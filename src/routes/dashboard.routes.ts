@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
 import { DashboardController } from "../controllers/DashboardController";
-import { roleMiddleware } from "../middlewares/role.Middleware";
-import { Role } from "../enums/Role";
+import { exigir } from "../middlewares/permissao";
 
 const dashboardRoutes = Router();
 protegerParamsNumericos(dashboardRoutes);
 
 const dashboardController = new DashboardController();
-const apenasAdminGestor = roleMiddleware(Role.ADMIN, Role.GESTOR);
+// dashboard do gestor = indicadores de toda a empresa; os dashboards pessoais (técnico/operador) são só do próprio usuário
+const apenasAdminGestor = exigir("dashboard.ver_gestor");
 
 
 // =========================
