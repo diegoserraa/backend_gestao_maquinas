@@ -92,31 +92,6 @@ export class OrdemServicoController {
   };
 
 
-  atualizar = async (req: Request, res: Response) => {
-
-    const os =
-      await this.service.atualizar(
-        Number(req.params.id),
-        req.body,
-        req.empresaId!
-      );
-
-    return res.json(os);
-
-  };
-
-
-  excluir = async (req: Request, res: Response) => {
-
-    await this.service.excluir(
-      Number(req.params.id),
-      req.empresaId!
-    );
-
-    return res.sendStatus(204);
-
-  };
-
 indicadoresPorMaquina = async (
   req: Request,
   res: Response
@@ -230,43 +205,44 @@ finalizar = async (req: Request, res: Response) => {
 
   };
 
-
   pausar = async (req: Request, res: Response) => {
-
-    const {
-      motivo
-    } = req.body;
-
 
     const os =
       await this.service.pausar(
         Number(req.params.id),
-        motivo,
+        req.body.motivo,
+        req.user!.id,
         req.empresaId!
       );
-
 
     return res.json(os);
 
   };
 
 
-  alterarPrioridade = async (req: Request, res: Response) => {
-
-    const {
-      prioridade
-    } = req.body;
-
+  retomar = async (req: Request, res: Response) => {
 
     const os =
-      await this.service.alterarPrioridade(
+      await this.service.retomar(
         Number(req.params.id),
-        prioridade,
+        req.user!.id,
         req.empresaId!
       );
 
-
     return res.json(os);
+
+  };
+
+
+  listarPausas = async (req: Request, res: Response) => {
+
+    const pausas =
+      await this.service.listarPausas(
+        Number(req.params.id),
+        req.empresaId!
+      );
+
+    return res.json(pausas);
 
   };
 

@@ -3,7 +3,7 @@ import type { Duplex } from "stream";
 import { WebSocket, WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 import { TelemetriaService } from "../services/TelemetriaService";
-import { registrarWss } from "./wsBus";
+import { registrarWss, type ClienteWS } from "./wsBus";
 import { TokenPayload } from "../types/auth";
 import { logger } from "../config/logger";
 import { permissaoService } from "../services/PermissaoService";
@@ -14,7 +14,7 @@ const log = logger.child({ modulo: "ws-telemetria" });
 export { broadcastTelemetria, broadcastEvento } from "./wsBus";
 
 /**
- * Hub WebSocket da telemetria.
+ * Hub WebSocket do tempo real (telemetria, alertas e notificações).
  *
  * - Caminho: /ws/telemetria?token=<jwt>
  * - Exige um token válido na query string — o navegador não consegue
@@ -22,19 +22,17 @@ export { broadcastTelemetria, broadcastEvento } from "./wsBus";
  *   WebSocket, então o token vem por aí mesmo (nunca em log de servidor
  *   HTTP porque a troca acontece só uma vez, no upgrade).
  * - O cliente só recebe (mensagens enviadas pelo cliente são ignoradas).
- * - Ao conectar recebe o snapshot (só da própria empresa); depois recebe
- *   só os eventos da própria empresa.
+ * - Qualquer usuário ATIVO conecta (recebe as próprias notificações em tempo real).
+ * - Telemetria/alertas só vão para quem tem "monitoramento.ver", e sempre só
+ *   da própria empresa; ao conectar essas pessoas recebem o snapshot.
+ * - Se as permissões do usuário mudam, a conexão é fechada e o navegador
+ *   reconecta já com as permissões novas (ver PermissaoService.invalidar).
  * - Keep-alive por ping/pong a cada 30s (derruba conexões mortas).
  */
 
 const WS_PATH = "/ws/telemetria";
 const HEARTBEAT_MS = 30_000;
 const MAX_CLIENTES = 200;
-
-interface ClienteWS extends WebSocket {
-    isAlive?: boolean;
-    empresaId?: string;
-}
 
 let wss: WebSocketServer | null = null;
 const service = new TelemetriaService();
@@ -58,17 +56,11 @@ async function aceitar(req: IncomingMessage, socket: Duplex, head: Buffer, url: 
         return;
     }
 
-    // mesma regra da API: usuário ativo e com acesso ao Monitoramento
+    // mesma regra da API: usuário ativo, da mesma empresa do token
     const perfil = await permissaoService.perfil(payload.id).catch(() => null);
 
     if (!perfil || !perfil.ativo || perfil.empresaId !== payload.empresa_id) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-        socket.destroy();
-        return;
-    }
-
-    if (!perfil.permissoes.has("monitoramento.ver")) {
-        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
         socket.destroy();
         return;
     }
@@ -78,8 +70,13 @@ async function aceitar(req: IncomingMessage, socket: Duplex, head: Buffer, url: 
         return;
     }
 
+    const monitora = perfil.permissoes.has("monitoramento.ver");
+
     (wss as WebSocketServer).handleUpgrade(req, socket, head, (ws) => {
-        (ws as ClienteWS).empresaId = payload.empresa_id;
+        const cliente = ws as ClienteWS;
+        cliente.empresaId = payload.empresa_id;
+        cliente.usuarioId = payload.id;
+        cliente.monitora = monitora;
         (wss as WebSocketServer).emit("connection", ws, req);
     });
 }
@@ -110,7 +107,9 @@ export function initTelemetriaRealtime(server: HttpServer): void {
         ws.on("message", () => { });
         ws.on("error", () => { });
 
-        // snapshot inicial — só as máquinas da própria empresa
+        // snapshot inicial — só para quem monitora, só as máquinas da própria empresa
+        if (!ws.monitora) return;
+
         try {
             const atual = await service.listarAtual(ws.empresaId!);
             enviar(ws, { type: "snapshot", data: atual });

@@ -128,7 +128,8 @@ export class NotificacaoController {
 
         await this.service.marcarComoLida(
             id,
-            req.user!.id
+            req.user!.id,
+            req.empresaId
         );
 
 
@@ -149,7 +150,8 @@ export class NotificacaoController {
 
 
         await this.service.marcarTodasComoLidas(
-            usuario_id
+            usuario_id,
+            req.empresaId
         );
 
 
@@ -172,7 +174,8 @@ export class NotificacaoController {
 
         await this.service.excluir(
             id,
-            req.user!.id
+            req.user!.id,
+            req.empresaId
         );
 
 

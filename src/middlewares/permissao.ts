@@ -67,7 +67,7 @@ export const exigirVerOS: RequestHandler = (req, res, next) =>
     escopoOS(req) ? next() : negar(res, ["os.ver", "os.ver_proprias"]);
 
 /**
- * Ação sobre uma O.S. existente (iniciar/pausar/finalizar):
+ * Ação sobre uma O.S. existente (iniciar/finalizar):
  * exige a permissão da ação e, sem "agir em O.S. de outros", só vale na O.S. em que o
  * usuário é o técnico responsável (e que não seja de execução externa).
  */
@@ -75,12 +75,21 @@ export const acaoEmOS =
     (permissao: string): RequestHandler =>
     async (req: Request, res: Response, next: NextFunction) => {
         if (!pode(req, permissao)) return negar(res, [permissao]);
-        if (pode(req, "os.agir_em_qualquer")) return next();
 
         const os = await osRepo.buscarPorId(Number(req.params.id), req.empresaId!);
 
         // inexistente (ou de outra empresa): deixa o serviço responder "não encontrada"
         if (!os) return next();
+
+        // regra do sistema: o gestor não faz manutenção. Das ações de execução, só finaliza, e apenas
+        // a O.S. de técnico externo (a de técnico da empresa quem finaliza é o próprio técnico)
+        if (req.user!.role === "GESTOR" && !os.execucao_externa) {
+            return res.status(403).json({
+                error: "O gestor só finaliza O.S. de técnico externo. As demais são do técnico responsável.",
+            });
+        }
+
+        if (pode(req, "os.agir_em_qualquer")) return next();
 
         if (os.id_tecnico === req.user!.id && !os.execucao_externa) return next();
 
@@ -89,6 +98,13 @@ export const acaoEmOS =
 
 /** Atribuir: externo, assumir pra si mesmo, ou atribuir a outro técnico — cada um com a sua permissão. */
 export const permissaoAtribuir: RequestHandler = (req, res, next) => {
+    // regra do sistema: quem assume a O.S. para si é o técnico; o gestor só atribui a um técnico ou a um parceiro externo
+    if (!req.body.externo && req.body.id_tecnico === req.user!.id && req.user!.role !== "TECNICO") {
+        return res.status(403).json({
+            error: "Somente técnicos assumem O.S. Atribua a um técnico ou defina a execução externa.",
+        });
+    }
+
     const necessaria = req.body.externo
         ? "os.definir_externo"
         : req.body.id_tecnico === req.user!.id

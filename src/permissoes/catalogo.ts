@@ -65,25 +65,22 @@ export const CATALOGO: ModuloDef[] = [
             { chave: "ver", rotulo: "Ver todas as O.S.", descricao: "Enxerga as ordens de serviço de toda a empresa" },
             { chave: "ver_proprias", rotulo: "Ver só as minhas O.S.", descricao: "Enxerga apenas as que abriu ou que são dele" },
             { chave: "criar", rotulo: "Abrir O.S.", descricao: "Abrir novas ordens de serviço", requerUmDe: VER_OS },
-            { chave: "editar", rotulo: "Editar O.S.", descricao: "Alterar os dados de uma ordem de serviço", requerUmDe: VER_OS },
-            { chave: "excluir", rotulo: "Excluir O.S.", descricao: "Apagar ordens de serviço", requerUmDe: VER_OS },
             { chave: "atribuir", rotulo: "Atribuir a um técnico", descricao: "Designar a O.S. a qualquer técnico", requerUmDe: VER_OS },
             { chave: "assumir", rotulo: "Assumir O.S.", descricao: "Pegar uma O.S. aberta para si mesmo", requerUmDe: VER_OS },
             { chave: "iniciar", rotulo: "Iniciar atendimento", descricao: "Iniciar o atendimento da O.S.", requerUmDe: VER_OS },
-            { chave: "pausar", rotulo: "Pausar atendimento", descricao: "Pausar o atendimento em andamento", requerUmDe: VER_OS },
+            { chave: "pausar", rotulo: "Pausar e retomar", descricao: "Pausar o atendimento (com o motivo) e retomar depois", requerUmDe: VER_OS },
             { chave: "finalizar", rotulo: "Finalizar", descricao: "Encerrar a O.S. com a resolução e os custos", requerUmDe: VER_OS },
             { chave: "cancelar", rotulo: "Cancelar", descricao: "Cancelar ordens de serviço", requerUmDe: VER_OS },
-            { chave: "alterar_prioridade", rotulo: "Alterar prioridade", descricao: "Mudar a prioridade da O.S.", requerUmDe: VER_OS },
             {
                 chave: "definir_externo",
                 rotulo: "Definir técnico externo",
                 descricao: "Marcar que a O.S. será executada por um parceiro",
-                requer: ["os.iniciar", "os.agir_em_qualquer"],
+                requer: ["os.agir_em_qualquer"],
             },
             {
                 chave: "agir_em_qualquer",
                 rotulo: "Agir em O.S. de outros",
-                descricao: "Iniciar, pausar e finalizar também as O.S. que são de outro técnico ou externas",
+                descricao: "Iniciar e finalizar também as O.S. que são de outro técnico ou externas",
                 requerUmDe: VER_OS,
             },
         ],
@@ -150,7 +147,7 @@ export const CATALOGO: ModuloDef[] = [
         acesso: "relatorios.ver",
         acoes: [
             { chave: "ver", rotulo: "Ver relatórios", descricao: "Pré-visualizar relatórios" },
-            { chave: "exportar", rotulo: "Exportar", descricao: "Baixar relatórios em Excel/PDF", requer: ["relatorios.ver"] },
+            { chave: "exportar", rotulo: "Exportar", descricao: "Baixar os relatórios em Excel", requer: ["relatorios.ver"] },
         ],
     },
     {
@@ -220,13 +217,60 @@ export function normalizar(entrada: Iterable<string>): { final: string[]; adicio
     return { final, adicionadas: final.filter((k) => !original.has(k)) };
 }
 
+/**
+ * Remove o que perdeu uma dependência (o contrário de normalizar), até estabilizar.
+ * Ex.: sem "maquinas.ver", caem "maquinas.criar", "maquinas.editar"...
+ */
+export function podar(entrada: Iterable<string>): string[] {
+    const conjunto = new Set(entrada);
+
+    let mudou = true;
+    while (mudou) {
+        mudou = false;
+
+        for (const chave of [...conjunto]) {
+            const def = defPorChave.get(chave)?.def;
+            if (!def) continue;
+
+            const faltaTodas = (def.requer ?? []).some((d) => !conjunto.has(d));
+            const faltaUma = !!def.requerUmDe && !def.requerUmDe.some((d) => conjunto.has(d));
+
+            if (faltaTodas || faltaUma) {
+                conjunto.delete(chave);
+                mudou = true;
+            }
+        }
+    }
+
+    const ordem = new Map(TODAS_PERMISSOES.map((k, i) => [k, i]));
+    return [...conjunto].sort((a, b) => (ordem.get(a) ?? 0) - (ordem.get(b) ?? 0));
+}
+
 /* ============ padrões por tipo de funcionário ============ */
 
 const so = (...chaves: string[]) => normalizar(chaves).final;
 
+/**
+ * Regra do sistema: o gestor não faz manutenção. Ele não assume, não inicia e não pausa/retoma O.S.
+ * (isso é do técnico); atribui a um técnico ou a um parceiro externo, cancela e finaliza.
+ */
+export const VEDADAS_AO_GESTOR: readonly string[] = ["os.assumir", "os.iniciar", "os.pausar"];
+
+/** Permissões que um tipo de funcionário não pode ter, mesmo que alguém tente conceder. */
+export function vedadasAoPapel(papel: string): readonly string[] {
+    return papel === "GESTOR" ? VEDADAS_AO_GESTOR : [];
+}
+
+/** Tira da lista o que o tipo não pode ter. */
+export function sanearPorPapel(papel: string, lista: Iterable<string>): string[] {
+    const vedadas = vedadasAoPapel(papel);
+    return [...lista].filter((p) => !vedadas.includes(p));
+}
+
 /** Ponto de partida de cada tipo — reproduz o que cada um já podia fazer antes do sistema de permissões. */
 export const PADRAO_POR_PAPEL: Record<Exclude<Papel, "ADMIN">, readonly string[]> = {
-    GESTOR: [...TODAS_PERMISSOES],
+    // o gestor atribui (a um técnico ou a um parceiro externo); quem assume a O.S. é o técnico
+    GESTOR: TODAS_PERMISSOES.filter((p) => !VEDADAS_AO_GESTOR.includes(p)),
 
     TECNICO: so(
         "maquinas.ver",
@@ -283,6 +327,8 @@ export function catalogoParaApi() {
                 requerUmDe: a.requerUmDe ?? [],
             })),
         })),
+        // permissões que o tipo não pode ter (a tela esconde essas opções)
+        vedadas: { GESTOR: VEDADAS_AO_GESTOR, TECNICO: [], OPERADOR: [] },
         padroes: {
             GESTOR: PADRAO_POR_PAPEL.GESTOR,
             TECNICO: PADRAO_POR_PAPEL.TECNICO,

@@ -23,4 +23,26 @@ export interface IOrdemServico {
   data_inicio_atendimento?: string;
   motivo_cancelamento?: string;
   data_cancelamento?: string;
+
+  // pausa: tempo já pausado (pausas encerradas), início da pausa em curso e o motivo dela
+  tempo_pausado_segundos?: number;
+  pausada_em?: string | null;
+  motivo_pausa?: string | null;
+  // só na leitura: segundos da pausa em curso até agora (calculado pelo banco)
+  pausa_atual_segundos?: number;
+  // só na leitura: nome de quem abriu a O.S.
+  solicitante_nome?: string | null;
+}
+
+export interface IPausaOS {
+  id: number;
+  os_id: number;
+  motivo: string;
+  pausada_em: string;
+  retomada_em: string | null;
+  pausada_por: number | null;
+  pausada_por_nome: string | null;
+  retomada_por: number | null;
+  retomada_por_nome: string | null;
+  duracao_segundos: number | null;
 }

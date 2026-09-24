@@ -102,6 +102,10 @@ export class DashboardRepository {
             ) AS os_andamento,
 
             COUNT(*) FILTER(
+                WHERE os.status = 'PAUSADA'
+            ) AS os_pausadas,
+
+            COUNT(*) FILTER(
                 WHERE os.status = 'FINALIZADA'
             ) AS os_finalizadas,
 
@@ -443,7 +447,8 @@ async obterPreventivasVencidas(
                     AND os.status IN (
                         'ABERTA',
                         'ATRIBUIDA',
-                        'EM_ANDAMENTO'
+                        'EM_ANDAMENTO',
+                        'PAUSADA'
                     )
 
             )
@@ -970,12 +975,15 @@ async obterOSAndamentoTecnico(tecnicoId: number, empresaId: string) {
             os.tipo_manutencao,
             os.prioridade,
             os.data_abertura,
-            os.data_inicio_atendimento
+            os.data_inicio_atendimento,
+            os.pausada_em,
+            os.motivo_pausa,
+            os.tempo_pausado_segundos
         FROM ordens_servico os
         LEFT JOIN maquinas m ON m.id = os.maquina_id
         WHERE os.id_tecnico = $1
         AND os.empresa_id = $2
-        AND os.status = 'EM_ANDAMENTO'
+        AND os.status IN ('EM_ANDAMENTO', 'PAUSADA')
         ORDER BY os.data_inicio_atendimento DESC
         `,
         [tecnicoId, empresaId]
@@ -1081,7 +1089,7 @@ async obterOSAndamentoOperador(operadorId: number, empresaId: string) {
         FROM ordens_servico
         WHERE id_solicitante = $1
         AND empresa_id = $2
-        AND status = 'EM_ANDAMENTO'
+        AND status IN ('EM_ANDAMENTO', 'PAUSADA')
         `,
         [operadorId, empresaId]
     );

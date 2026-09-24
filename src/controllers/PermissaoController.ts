@@ -2,8 +2,6 @@ import { Request, Response } from "express";
 import { permissaoService } from "../services/PermissaoService";
 import { catalogoParaApi } from "../permissoes/catalogo";
 import { atorDe } from "../middlewares/permissao";
-import { auditoriaQuerySchema } from "../schemas/permissao";
-import { invalido } from "../utils/erros";
 
 export class PermissaoController {
 
@@ -35,11 +33,10 @@ export class PermissaoController {
         return res.json(resultado);
     };
 
-    auditoria = async (req: Request, res: Response) => {
-        const q = auditoriaQuerySchema.safeParse(req.query);
-        if (!q.success) throw invalido("Parâmetros inválidos");
-
-        const registros = await permissaoService.auditoria(atorDe(req), q.data.limite ?? 50, q.data.usuario);
-        return res.json(registros);
+    /** Dar/retirar permissões de vários funcionários (por tipo ou por seleção). */
+    emGrupo = async (req: Request, res: Response) => {
+        const { simular, ...pedido } = req.body;
+        const resultado = await permissaoService.aplicarEmGrupo(atorDe(req), pedido, simular === true);
+        return res.json(resultado);
     };
 }

@@ -55,6 +55,7 @@ const TABELAS_POR_EMPRESA = [
   "anexos",
   "notificacoes",
   "push_subscriptions",
+  "os_pausas",
   "ordens_servico",
   "maquinas",
   "setores",

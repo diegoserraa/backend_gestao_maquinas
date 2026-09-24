@@ -50,7 +50,7 @@ export class RelatorioService {
        TÍTULO
     ========================= */
 
-    worksheet.mergeCells("A1:Q1");
+    worksheet.mergeCells("A1:R1");
 
 
     const titulo =
@@ -167,6 +167,11 @@ export class RelatorioService {
         key: "valor_parceiro",
         width: 16,
       },
+
+      {
+        key: "tempo_pausado",
+        width: 16,
+      },
     ];
 
 
@@ -213,6 +218,8 @@ export class RelatorioService {
       "Custo da Manutenção",
 
       "Custo do Parceiro",
+
+      "Tempo Pausado",
     ];
 
 
@@ -326,6 +333,11 @@ export class RelatorioService {
           valor_parceiro:
             item.valor_parceiro ?? 0,
 
+          tempo_pausado:
+            item.tempo_pausado_segundos
+              ? this.formatarDuracao(item.tempo_pausado_segundos)
+              : "-",
+
         });
 
       row.getCell(
@@ -368,7 +380,7 @@ export class RelatorioService {
 
       from: "A2",
 
-      to: "Q2",
+      to: "R2",
 
     };
 
@@ -422,7 +434,7 @@ export class RelatorioService {
        TÍTULO
     ===================================================== */
 
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:P1");
 
 
     const titulo =
@@ -483,6 +495,11 @@ export class RelatorioService {
       {
         key: "os_em_andamento",
         width: 20,
+      },
+
+      {
+        key: "os_pausadas",
+        width: 16,
       },
 
       {
@@ -554,6 +571,8 @@ export class RelatorioService {
       "OS Atribuídas",
 
       "OS em Andamento",
+
+      "OS Pausadas",
 
       "OS Canceladas",
 
@@ -690,6 +709,10 @@ export class RelatorioService {
             Number(item.os_em_andamento),
 
 
+          os_pausadas:
+            Number(item.os_pausadas ?? 0),
+
+
           os_canceladas:
             Number(item.os_canceladas),
 
@@ -763,7 +786,7 @@ export class RelatorioService {
 
       from: "A2",
 
-      to: "O2",
+      to: "P2",
 
     };
 
@@ -813,6 +836,21 @@ export class RelatorioService {
       filtros
     );
 
+  }
+
+  // "45s", "12min", "1h 05min", "2d 3h" (mesmo formato das telas)
+  private formatarDuracao(segundos: number): string {
+    const s = Math.max(0, Math.floor(Number(segundos)));
+
+    if (s < 60) return `${s}s`;
+
+    const minutos = Math.floor(s / 60);
+    if (minutos < 60) return `${minutos}min`;
+
+    const horas = Math.floor(minutos / 60);
+    if (horas < 24) return `${horas}h ${String(minutos % 60).padStart(2, "0")}min`;
+
+    return `${Math.floor(horas / 24)}d ${horas % 24}h`;
   }
 
   private formatarDataHora(

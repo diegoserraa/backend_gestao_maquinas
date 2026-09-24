@@ -35,6 +35,7 @@ export interface RelatorioOS {
   valor_gasto: number | null;
   id_parceiro: number | null;
   valor_parceiro: number | null;
+  tempo_pausado_segundos: number | null;
 }
 
 export interface RelatorioIndicadorMaquina {
@@ -46,6 +47,7 @@ export interface RelatorioIndicadorMaquina {
   os_atribuidas: number;
   os_canceladas: number;
   os_em_andamento: number;
+  os_pausadas: number;
   total_os: number;
   os_finalizadas: number;
 

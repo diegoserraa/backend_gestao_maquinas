@@ -51,6 +51,13 @@ export class OrdemServicoService {
     if (!usuario) throw new Error("Usuário não encontrado");
   }
 
+  // só se atribui a um técnico ativo da empresa (não a gestor, operador ou administrador)
+  private async validarTecnico(usuarioId: number, empresaId: string) {
+    const tecnico = await this.usuarioRepository.buscarPorId(usuarioId, empresaId);
+    if (!tecnico || tecnico.role !== "TECNICO") throw new Error("Escolha um técnico da empresa");
+    if (tecnico.ativo === false) throw new Error("Este técnico está inativo");
+  }
+
   private validarTransicao(statusAtual: string, statusNovo: string) {
 
     if (!TRANSICOES[statusAtual]?.includes(statusNovo)) {
@@ -75,7 +82,7 @@ async criar(dados:IOrdemServico, empresaId: string) {
 
   await this.validarMaquina(dados.maquina_id, empresaId);
   await this.validarUsuario(dados.id_solicitante, empresaId);
-  await this.validarUsuario(dados.id_tecnico, empresaId);
+  if (dados.id_tecnico != null) await this.validarTecnico(dados.id_tecnico, empresaId);
 
   const ordem =
     await this.repo.criar({
@@ -149,19 +156,6 @@ async criar(dados:IOrdemServico, empresaId: string) {
 }
 
 
-  async atualizar(
-    id:number,
-    dados:IOrdemServico,
-    empresaId: string
-  ){
-
-    await this.buscarOuFalhar(id, empresaId);
-
-    return this.repo.atualizar(id,dados, empresaId);
-
-  }
-
-
   // Técnico assume ou gestor atribui
   async atribuir(
     id:number,
@@ -172,7 +166,7 @@ async criar(dados:IOrdemServico, empresaId: string) {
 
     const os = await this.buscarOuFalhar(id, empresaId);
 
-    await this.validarUsuario(id_tecnico, empresaId);
+    await this.validarTecnico(id_tecnico, empresaId);
 
     this.validarTransicao(
       os.status,
@@ -232,12 +226,17 @@ async criar(dados:IOrdemServico, empresaId: string) {
 
     log.info({ osId: id, atribuidoPor: id_atribuido_por, empresaId }, "O.S. marcada como execução externa");
 
+    // O parceiro externo já está executando: a O.S. vai direto para "em andamento" (o gestor não "inicia"
+    // atendimento; ele só define o executor externo e, no fim, finaliza com o parceiro e o custo).
+    const agora = new Date().toISOString();
+
     return this.repo.patch(id,{
       execucao_externa:true,
       id_tecnico:null,
       id_atribuido_por,
-      data_atribuicao:new Date().toISOString(),
-      status:"ATRIBUIDA"
+      data_atribuicao:agora,
+      data_inicio_atendimento:agora,
+      status:"EM_ANDAMENTO"
     }, empresaId);
 
   }
@@ -425,73 +424,141 @@ async finalizar(
       );
     }
 
+    const agora = new Date();
 
-    return this.repo.patch(id,{
+    // cancelada durante uma pausa: a pausa termina agora (o tempo pausado fica registrado)
+    const encerrandoPausa = os.status === "PAUSADA";
+    const segundosPausa = encerrandoPausa ? await this.repo.segundosDaPausaEmCurso(id, empresaId) : 0;
+
+    const cancelada = await this.repo.patch(id,{
       status:"CANCELADA",
       motivo_cancelamento,
-      data_cancelamento:new Date().toISOString()
+      data_cancelamento:agora.toISOString(),
+      ...(encerrandoPausa
+        ? {
+            tempo_pausado_segundos: (os.tempo_pausado_segundos ?? 0) + segundosPausa,
+            pausada_em: null,
+            motivo_pausa: null,
+          }
+        : {})
     }, empresaId);
 
+    if (encerrandoPausa) await this.repo.fecharPausa(id, empresaId, null, agora.toISOString());
+
+    return cancelada;
+
   }
+  // Pausar o atendimento: exige o motivo; o tempo parado deixa de contar como tempo de reparo
+  async pausar(
+    id: number,
+    motivo: string,
+    usuarioId: number,
+    empresaId: string
+  ) {
+    const os = await this.buscarOuFalhar(id, empresaId);
+
+    this.validarTransicao(os.status, "PAUSADA");
+
+    const motivoLimpo = motivo?.trim();
+    if (!motivoLimpo) throw new Error("Informe o motivo da pausa");
+
+    const agora = new Date().toISOString();
+
+    const pausada = await this.repo.patchSeStatus(id, empresaId, "EM_ANDAMENTO", {
+      status: "PAUSADA",
+      pausada_em: agora,
+      motivo_pausa: motivoLimpo,
+    });
+
+    // outra requisição pausou/encerrou a O.S. no meio do caminho
+    if (!pausada) throw new Error("Transição inválida: a O.S. não está mais em andamento");
+
+    await this.repo.abrirPausa(id, empresaId, motivoLimpo, usuarioId, agora);
+
+    log.info({ osId: id, por: usuarioId, empresaId }, "O.S. pausada");
+
+    await this.avisarPausa(os, usuarioId, empresaId, "pausada", motivoLimpo);
+
+    return pausada;
+  }
+
+  // Retomar depois da pausa: soma o tempo parado e volta a "em andamento"
+  async retomar(
+    id: number,
+    usuarioId: number,
+    empresaId: string
+  ) {
+    const os = await this.buscarOuFalhar(id, empresaId);
+
+    if (os.status !== "PAUSADA") {
+      throw new Error(`Transição inválida: ${os.status} → EM_ANDAMENTO (a O.S. não está pausada)`);
+    }
+
+    const agora = new Date();
+    const segundosPausa = await this.repo.segundosDaPausaEmCurso(id, empresaId);
+
+    const retomada = await this.repo.patchSeStatus(id, empresaId, "PAUSADA", {
+      status: "EM_ANDAMENTO",
+      tempo_pausado_segundos: (os.tempo_pausado_segundos ?? 0) + segundosPausa,
+      pausada_em: null,
+      motivo_pausa: null,
+    });
+
+    if (!retomada) throw new Error("Transição inválida: a O.S. não está mais pausada");
+
+    await this.repo.fecharPausa(id, empresaId, usuarioId, agora.toISOString());
+
+    log.info({ osId: id, por: usuarioId, empresaId }, "O.S. retomada");
+
+    await this.avisarPausa(os, usuarioId, empresaId, "retomada");
+
+    return retomada;
+  }
+
+  // Histórico de pausas (para a linha do tempo e a tela de detalhes)
+  async listarPausas(id: number, empresaId: string) {
+    await this.buscarOuFalhar(id, empresaId);
+    return this.repo.listarPausas(id, empresaId);
+  }
+
+  // quem abriu e quem atribuiu a O.S. é avisado (menos quem fez a ação); falha de aviso não derruba a ação
+  private async avisarPausa(
+    os: IOrdemServico,
+    autorId: number,
+    empresaId: string,
+    acao: "pausada" | "retomada",
+    motivo?: string
+  ) {
+    try {
+      const maquina = await this.maquinaRepository.buscarPorId(os.maquina_id, empresaId);
+      const nomeMaquina = maquina?.nome ?? `Máquina ${os.maquina_id}`;
+
+      const destinatarios = new Set<number>();
+      if (os.id_solicitante) destinatarios.add(os.id_solicitante);
+      if (os.id_atribuido_por) destinatarios.add(os.id_atribuido_por);
+      destinatarios.delete(autorId);
+
+      for (const usuarioId of destinatarios) {
+        await this.notificacaoSistemaService.notificar(
+          usuarioId,
+          acao === "pausada" ? "Manutenção pausada" : "Manutenção retomada",
+          acao === "pausada"
+            ? `A manutenção de ${nomeMaquina} foi pausada. Motivo: ${motivo}`
+            : `A manutenção de ${nomeMaquina} foi retomada.`,
+          acao === "pausada" ? "OS_PAUSADA" : "OS_RETOMADA",
+          `/ordens-servico/${os.id || 0}`
+        );
+      }
+    } catch (erro) {
+      log.warn({ err: erro, osId: os.id }, "não foi possível avisar sobre a pausa/retomada");
+    }
+  }
+
 async indicadoresPorMaquina(
   maquinaId: number,
   empresaId: string
 ) {
   return this.repo.indicadoresPorMaquina(maquinaId, empresaId);
-}
-
-  async pausar(
-    id:number,
-    motivo_cancelamento:string,
-    empresaId: string
-  ){
-
-    const os = await this.buscarOuFalhar(id, empresaId);
-
-    this.validarTransicao(
-      os.status,
-      "PAUSADA"
-    );
-
-
-    return this.repo.patch(id,{
-      status:"PAUSADA",
-      motivo_cancelamento
-    }, empresaId);
-
-  }
-
-
-  async alterarPrioridade(
-    id:number,
-    prioridade:string,
-    empresaId: string
-  ){
-
-    const os = await this.buscarOuFalhar(id, empresaId);
-
-
-    if(
-      ["FINALIZADA","CANCELADA"]
-      .includes(os.status)
-    ){
-      throw new Error(
-        "Não é possível alterar prioridade de OS encerrada"
-      );
-    }
-
-
-    return this.repo.patch(id,{
-      prioridade
-    }, empresaId);
-
-  }
-  async excluir(id:number, empresaId: string){
-
-  await this.buscarOuFalhar(id, empresaId);
-
-  await this.repo.excluir(id, empresaId);
-
 }
 
 }

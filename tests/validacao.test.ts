@@ -180,10 +180,6 @@ describe("ordens de serviço", () => {
     expect(res.status).toBe(400);
   });
 
-  it("prioridade inválida devolve 400", async () => {
-    const res = await comoA(request(app).patch(`${url()}/prioridade`)).send({ prioridade: "X" });
-    expect(res.status).toBe(400);
-  });
 
   it("atribuir grava quem atribuiu a partir do token, ignorando o corpo", async () => {
     const res = await comoA(request(app).patch(`${url()}/atribuir`)).send({

@@ -185,7 +185,9 @@ export class MaquinaRepository {
     async listarOsPorMaquina(maquinaId: number, empresaId: string, apenasDoUsuario: number | null = null): Promise<any[]> {
     const { rows } = await pool.query(
         `
-        SELECT *
+        SELECT *,
+          CASE WHEN pausada_em IS NULL THEN 0
+               ELSE GREATEST(0, EXTRACT(EPOCH FROM ((NOW() AT TIME ZONE 'UTC') - pausada_em)))::int END AS pausa_atual_segundos
         FROM ordens_servico
         WHERE maquina_id = $1 AND empresa_id = $2
           AND ($3::int IS NULL OR id_solicitante = $3 OR id_tecnico = $3)

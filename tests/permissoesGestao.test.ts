@@ -13,7 +13,7 @@ import { criarFixture, criarUsuarioTeste, fecharPool, limparTudo, pool, Fixture,
 
 /**
  * Gestão de permissões: quem pode mexer nas permissões de quem, teto de concessão,
- * auditoria, efeito imediato, isolamento entre empresas, cache e WebSocket.
+ * teto, efeito imediato, isolamento entre empresas, cache e WebSocket.
  */
 
 let fx: Fixture;
@@ -217,7 +217,7 @@ describe("hierarquia: quem pode mexer nas permissões de quem", () => {
     expect((await com(chefe.token).put(`/permissoes/usuarios/${chefe.id}`, { permissoes: [] })).status).toBe(403);
   });
 
-  it("quem não tem 'gerenciar permissões' recebe 403 em tudo (consultar, definir, restaurar, auditoria)", async () => {
+  it("quem não tem 'gerenciar permissões' recebe 403 em tudo (consultar, definir, restaurar)", async () => {
     const semGerenciar = await criarUsuarioTeste(fx.A, { role: "GESTOR", permissoes: semPerm("usuarios.gerenciar_permissoes") });
     const alvo = await novoOperador();
     const c = com(semGerenciar.token);
@@ -225,7 +225,6 @@ describe("hierarquia: quem pode mexer nas permissões de quem", () => {
     expect((await c.get(`/permissoes/usuarios/${alvo.id}`)).status).toBe(403);
     expect((await c.put(`/permissoes/usuarios/${alvo.id}`, { permissoes: [] })).status).toBe(403);
     expect((await c.post(`/permissoes/usuarios/${alvo.id}/restaurar-padrao`)).status).toBe(403);
-    expect((await c.get("/permissoes/auditoria")).status).toBe(403);
   });
 });
 
@@ -257,7 +256,7 @@ describe("teto: só dá (ou tira) o que a própria pessoa tem", () => {
   });
 
   it("o 'concedível' mostrado na consulta é exatamente o teto dele", async () => {
-    const limitado = await criarUsuarioTeste(fx.A, { role: "GESTOR", permissoes: semPerm("os.cancelar", "os.excluir") });
+    const limitado = await criarUsuarioTeste(fx.A, { role: "GESTOR", permissoes: semPerm("os.cancelar", "os.atribuir") });
     const alvo = await novoTecnico();
     const res = await com(limitado.token).get(`/permissoes/usuarios/${alvo.id}`);
     expect(res.body.concedivel).not.toContain("os.cancelar");
@@ -292,7 +291,8 @@ describe("cadastro de funcionários: regras de quem pode o quê", () => {
   it("administrador cadastra gestor (que nasce com tudo); administrador ninguém cadastra", async () => {
     const g = await admin().post("/usuarios", corpo("GESTOR"));
     expect(g.status).toBe(201);
-    expect((await permissoesNoBanco(g.body.id)).length).toBe(TODAS_PERMISSOES.length);
+    // "nasce com tudo", menos o que gestor não faz (assumir/iniciar/pausar O.S.)
+    expect((await permissoesNoBanco(g.body.id)).length).toBe(TODAS_PERMISSOES.length - 3);
     expect((await admin().post("/usuarios", corpo("ADMIN"))).status).toBe(403);
   });
 
@@ -332,7 +332,7 @@ describe("cadastro de funcionários: regras de quem pode o quê", () => {
     expect((await gestor().put(`/usuarios/${t.id}`, dados("GESTOR"))).status).toBe(403);
     expect((await admin().put(`/usuarios/${t.id}`, dados("ADMIN"))).status).toBe(403);
     expect((await admin().put(`/usuarios/${t.id}`, dados("GESTOR"))).status).toBe(200);
-    expect((await permissoesNoBanco(t.id)).length).toBe(TODAS_PERMISSOES.length);
+    expect((await permissoesNoBanco(t.id)).length).toBe(TODAS_PERMISSOES.length - 3);
   });
 
   it("um administrador não pode ser rebaixado por aqui", async () => {
@@ -346,14 +346,14 @@ describe("cadastro de funcionários: regras de quem pode o quê", () => {
     expect((await pool.query(`SELECT role FROM usuarios WHERE id = $1`, [outroAdmin.id])).rows[0].role).toBe("ADMIN");
   });
 
-  it("trocar o tipo (técnico → operador) reaplica o padrão do novo tipo e fica na auditoria", async () => {
+  it("trocar o tipo (técnico → operador) reaplica o padrão do novo tipo e fica registrado", async () => {
     const t = await novoTecnico();
     const res = await gestor().put(`/usuarios/${t.id}`, { nome: "Agora operador", email: `${Math.random().toString(36).slice(2)}@vitest.local`, role: "OPERADOR" });
     expect(res.status).toBe(200);
     expect(await permissoesNoBanco(t.id)).toEqual([...PADRAO_POR_PAPEL.OPERADOR].sort());
 
-    const aud = await gestor().get(`/permissoes/auditoria?usuario=${t.id}`);
-    expect(aud.body[0].acao).toBe("mudanca_de_tipo");
+    const aud = await pool.query(`SELECT acao FROM auditoria_permissoes WHERE usuario_alvo = $1 ORDER BY id DESC LIMIT 1`, [t.id]);
+    expect(aud.rows[0].acao).toBe("mudanca_de_tipo");
   });
 
   it("desativar corta o acesso na hora (token antigo ainda válido); reativar devolve", async () => {
@@ -379,38 +379,33 @@ describe("cadastro de funcionários: regras de quem pode o quê", () => {
   });
 });
 
-describe("auditoria", () => {
-  it("registra quem mudou, em quem, e o antes/depois", async () => {
+describe("registro interno (não há tela nem rota para ele)", () => {
+  it("cada alteração grava quem mudou, em quem, e o antes/depois — direto no banco", async () => {
     const alvo = await novoOperador(["os.ver"]);
     await gestor().put(`/permissoes/usuarios/${alvo.id}`, { permissoes: ["os.ver", "relatorios.ver"] });
 
-    const res = await gestor().get(`/permissoes/auditoria?usuario=${alvo.id}`);
-    expect(res.status).toBe(200);
-    expect(res.body.length).toBe(1);
-    expect(res.body[0]).toMatchObject({
-      acao: "definir",
-      alterado_por: fx.A.gestorId,
-      usuario_alvo: alvo.id,
-      antes: ["os.ver"],
-      depois: ["os.ver", "relatorios.ver"],
-    });
-    expect(res.body[0].alterado_por_nome).toContain("gestor");
+    const { rows } = await pool.query(
+      `SELECT acao, alterado_por, usuario_alvo, antes, depois FROM auditoria_permissoes WHERE usuario_alvo = $1`,
+      [alvo.id]
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toMatchObject({ acao: "definir", alterado_por: fx.A.gestorId, usuario_alvo: alvo.id, antes: ["os.ver"], depois: ["os.ver", "relatorios.ver"] });
   });
 
-  it("aceita limite e rejeita parâmetros inválidos", async () => {
-    expect((await gestor().get("/permissoes/auditoria?limite=1")).body.length).toBeLessThanOrEqual(1);
-    expect((await gestor().get("/permissoes/auditoria?limite=0")).status).toBe(400);
-    expect((await gestor().get("/permissoes/auditoria?limite=abc")).status).toBe(400);
+  it("a rota do histórico foi retirada", async () => {
+    expect((await gestor().get("/permissoes/auditoria")).status).toBe(404);
   });
 
-  it("o histórico sobrevive à exclusão do funcionário (sem apontar pra ele)", async () => {
+  it("o registro sobrevive à exclusão do funcionário (sem apontar pra ele)", async () => {
     const alvo = await novoOperador([]);
     await gestor().put(`/permissoes/usuarios/${alvo.id}`, { permissoes: ["os.ver"] });
     await gestor().delete(`/usuarios/${alvo.id}`);
 
-    const res = await gestor().get("/permissoes/auditoria?limite=200");
-    const linha = res.body.find((r: any) => r.depois.length === 1 && r.depois[0] === "os.ver" && r.usuario_alvo === null);
-    expect(linha).toBeDefined();
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int n FROM auditoria_permissoes WHERE empresa_id = $1 AND usuario_alvo IS NULL AND depois = '["os.ver"]'::jsonb`,
+      [fx.A.empresaId]
+    );
+    expect(rows[0].n).toBeGreaterThan(0);
   });
 });
 
@@ -424,22 +419,6 @@ describe("outra empresa (isolamento)", () => {
     expect((await deB.put(`/permissoes/usuarios/${alvoA.id}`, { permissoes: [] })).status).toBe(404);
     expect((await deB.post(`/permissoes/usuarios/${alvoA.id}/restaurar-padrao`)).status).toBe(404);
     expect(await permissoesNoBanco(alvoA.id)).toEqual(antes);
-  });
-
-  it("a auditoria da A não aparece pra B (e vice-versa)", async () => {
-    const alvoA = await novoTecnico();
-    await gestor().put(`/permissoes/usuarios/${alvoA.id}`, { permissoes: ["os.ver"] });
-
-    const alvoB = await criarUsuarioTeste(fx.B, { role: "TECNICO", permissoes: [] });
-    await com(fx.B.tokenAdmin).put(`/permissoes/usuarios/${alvoB.id}`, { permissoes: ["os.ver"] });
-
-    const deB = (await com(fx.B.tokenAdmin).get("/permissoes/auditoria?limite=200")).body;
-    expect(deB.length).toBeGreaterThan(0);
-    expect(deB.every((r: any) => r.usuario_alvo === alvoB.id || r.usuario_alvo === null || r.usuario_alvo !== alvoA.id)).toBe(true);
-    expect(deB.some((r: any) => r.usuario_alvo === alvoA.id)).toBe(false);
-
-    const deA = (await admin().get("/permissoes/auditoria?limite=200")).body;
-    expect(deA.some((r: any) => r.usuario_alvo === alvoB.id)).toBe(false);
   });
 
   it("mudar permissões na A não afeta ninguém da B", async () => {
@@ -544,9 +523,9 @@ describe("WebSocket de monitoramento", () => {
     expect(await conectar(u.token)).toBe(101);
   });
 
-  it("sem 'ver monitoramento' é recusado (403)", async () => {
+  it("sem 'ver monitoramento' também conecta (recebe só as próprias notificações; a telemetria não chega)", async () => {
     const u = await novoTecnico(["maquinas.ver"]);
-    expect(await conectar(u.token)).toBe(403);
+    expect(await conectar(u.token)).toBe(101);
   });
 
   it("usuário desativado é recusado (401), mesmo com token válido", async () => {

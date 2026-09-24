@@ -171,7 +171,7 @@ describe("alterar/apagar recurso alheio não faz efeito", () => {
     expect(rows[0].ativo).toBe(true);
   });
 
-  const transicoes = ["atribuir", "iniciar", "pausar", "finalizar", "cancelar", "prioridade"];
+  const transicoes = ["atribuir", "iniciar", "finalizar", "cancelar"];
   it.each(transicoes)("B não consegue '%s' a OS da A", async (acao) => {
     await comoB(request(app).patch(`/ordens-servico/${fx.A.osId}/${acao}`)).send({
       id_tecnico: fx.B.tecnicoId,
@@ -188,16 +188,12 @@ describe("alterar/apagar recurso alheio não faz efeito", () => {
     expect(rows[0].id_tecnico).toBeNull();
   });
 
-  it("B não consegue editar a OS da A", async () => {
-    await comoB(request(app).put(`/ordens-servico/${fx.A.osId}`)).send({ descricao: "HACKEADA" });
-    const { rows } = await pool.query(`SELECT descricao FROM ordens_servico WHERE id = $1`, [fx.A.osId]);
-    expect(rows[0].descricao).toBe(`${fx.A.marcador}_os`);
-  });
-
-  // exclusões por último: se algo vazar, o registro some e a checagem pega
-  it("B não consegue apagar a OS da A", async () => {
-    await comoB(request(app).delete(`/ordens-servico/${fx.A.osId}`));
-    expect(await contar("ordens_servico", fx.A.osId)).toBe(1);
+  it("as rotas antigas de editar, apagar e mudar prioridade de O.S. não existem mais", async () => {
+    const os = fx.A.osId;
+    expect((await comoA(request(app).put(`/ordens-servico/${os}`)).send({ descricao: "x" })).status).toBe(404);
+    expect((await comoA(request(app).delete(`/ordens-servico/${os}`))).status).toBe(404);
+    expect((await comoA(request(app).patch(`/ordens-servico/${os}/prioridade`)).send({ prioridade: "BAIXA" })).status).toBe(404);
+    expect(await contar("ordens_servico", os)).toBe(1);
   });
 
   it("B não consegue apagar a máquina da A", async () => {

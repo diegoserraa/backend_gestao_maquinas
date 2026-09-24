@@ -9,36 +9,27 @@ export interface UsuarioPermissoes {
     ativo: boolean;
     empresa_id: string;
     inicializadas: boolean;
+    /** true = ajustado individualmente (tem prioridade sobre as alterações em grupo) */
+    personalizadas: boolean;
     permissoes: string[];
 }
 
-export interface RegistroAuditoria {
-    id: number;
-    acao: string;
-    alterado_por: number | null;
-    alterado_por_nome: string | null;
-    usuario_alvo: number | null;
-    usuario_alvo_nome: string | null;
-    antes: string[];
-    depois: string[];
-    criado_em: string;
-}
+const SELECT_USUARIO_COM_PERMISSOES = `
+    SELECT
+        u.id, u.nome, u.email, u.role, u.ativo, u.empresa_id,
+        u.permissoes_inicializadas AS inicializadas,
+        u.permissoes_personalizadas AS personalizadas,
+        COALESCE(array_agg(p.permissao) FILTER (WHERE p.permissao IS NOT NULL), '{}') AS permissoes
+    FROM usuarios u
+    LEFT JOIN usuario_permissoes p ON p.usuario_id = u.id
+`;
 
 export class PermissaoRepository {
 
     /** Usuário + permissões numa consulta só (sem filtro de empresa: quem chama confere). */
     async carregar(usuarioId: number): Promise<UsuarioPermissoes | null> {
         const { rows } = await pool.query(
-            `
-            SELECT
-                u.id, u.nome, u.email, u.role, u.ativo, u.empresa_id,
-                u.permissoes_inicializadas AS inicializadas,
-                COALESCE(array_agg(p.permissao) FILTER (WHERE p.permissao IS NOT NULL), '{}') AS permissoes
-            FROM usuarios u
-            LEFT JOIN usuario_permissoes p ON p.usuario_id = u.id
-            WHERE u.id = $1
-            GROUP BY u.id
-            `,
+            `${SELECT_USUARIO_COM_PERMISSOES} WHERE u.id = $1 GROUP BY u.id`,
             [usuarioId]
         );
 
@@ -53,13 +44,16 @@ export class PermissaoRepository {
 
     /**
      * Grava o conjunto inteiro (substitui) e marca o usuário como inicializado.
+     * `personalizada`: true = ajuste individual (prioridade sobre o grupo), false = volta a seguir
+     * o grupo/padrão, null = não mexe na marca (alterações em grupo).
      * `cliente` permite juntar a auditoria na mesma transação.
      */
     async substituir(
         usuarioId: number,
         empresaId: string,
         permissoes: string[],
-        cliente: PoolClient | null = null
+        cliente: PoolClient | null = null,
+        personalizada: boolean | null = null
     ): Promise<void> {
         const exec = cliente ?? (await pool.connect());
 
@@ -76,7 +70,13 @@ export class PermissaoRepository {
                 );
             }
 
-            await exec.query(`UPDATE usuarios SET permissoes_inicializadas = true WHERE id = $1`, [usuarioId]);
+            await exec.query(
+                `UPDATE usuarios
+                 SET permissoes_inicializadas = true,
+                     permissoes_personalizadas = COALESCE($2::boolean, permissoes_personalizadas)
+                 WHERE id = $1`,
+                [usuarioId, personalizada]
+            );
 
             if (!cliente) await exec.query("COMMIT");
         } catch (erro) {
@@ -85,6 +85,68 @@ export class PermissaoRepository {
         } finally {
             if (!cliente) (exec as PoolClient).release();
         }
+    }
+
+    /**
+     * Grava as permissões de VÁRIOS funcionários em 3 comandos (apagar, inserir, marcar) —
+     * o custo não cresce com a quantidade de pessoas. Não mexe na marca de "ajuste individual".
+     */
+    async substituirVarios(
+        cliente: PoolClient,
+        empresaId: string,
+        itens: { id: number; permissoes: string[] }[]
+    ): Promise<void> {
+        if (itens.length === 0) return;
+
+        const ids = itens.map((i) => i.id);
+
+        await cliente.query(`DELETE FROM usuario_permissoes WHERE usuario_id = ANY($1::int[])`, [ids]);
+
+        const donos: number[] = [];
+        const chaves: string[] = [];
+        for (const i of itens) {
+            for (const p of i.permissoes) {
+                donos.push(i.id);
+                chaves.push(p);
+            }
+        }
+
+        if (donos.length > 0) {
+            await cliente.query(
+                `INSERT INTO usuario_permissoes (usuario_id, permissao, empresa_id)
+                 SELECT u, p, $3 FROM unnest($1::int[], $2::text[]) AS t(u, p)`,
+                [donos, chaves, empresaId]
+            );
+        }
+
+        await cliente.query(`UPDATE usuarios SET permissoes_inicializadas = true WHERE id = ANY($1::int[])`, [ids]);
+    }
+
+    /** Um registro interno por funcionário alterado, todos num comando só. */
+    async registrarAuditoriaVarios(
+        cliente: PoolClient,
+        dados: {
+            empresaId: string;
+            alteradoPor: number | null;
+            acao: string;
+            itens: { usuarioAlvo: number; antes: string[]; depois: string[] }[];
+        }
+    ): Promise<void> {
+        if (dados.itens.length === 0) return;
+
+        await cliente.query(
+            `INSERT INTO auditoria_permissoes (empresa_id, alterado_por, usuario_alvo, acao, antes, depois)
+             SELECT $1, $2, t.u, $3, t.a::jsonb, t.d::jsonb
+             FROM unnest($4::int[], $5::text[], $6::text[]) AS t(u, a, d)`,
+            [
+                dados.empresaId,
+                dados.alteradoPor,
+                dados.acao,
+                dados.itens.map((i) => i.usuarioAlvo),
+                dados.itens.map((i) => JSON.stringify(i.antes)),
+                dados.itens.map((i) => JSON.stringify(i.depois)),
+            ]
+        );
     }
 
     /**
@@ -122,6 +184,7 @@ export class PermissaoRepository {
         }
     }
 
+    /** Registro interno de quem mudou o quê (fica no banco; não há tela para ele). */
     async registrarAuditoria(
         dados: {
             empresaId: string;
@@ -140,26 +203,6 @@ export class PermissaoRepository {
         );
     }
 
-    async listarAuditoria(empresaId: string, limite: number, usuarioAlvo?: number): Promise<RegistroAuditoria[]> {
-        const { rows } = await pool.query(
-            `
-            SELECT a.id, a.acao, a.alterado_por, ator.nome AS alterado_por_nome,
-                   a.usuario_alvo, alvo.nome AS usuario_alvo_nome,
-                   a.antes, a.depois, a.criado_em
-            FROM auditoria_permissoes a
-            LEFT JOIN usuarios ator ON ator.id = a.alterado_por
-            LEFT JOIN usuarios alvo ON alvo.id = a.usuario_alvo
-            WHERE a.empresa_id = $1
-              AND ($3::int IS NULL OR a.usuario_alvo = $3)
-            ORDER BY a.criado_em DESC, a.id DESC
-            LIMIT $2
-            `,
-            [empresaId, limite, usuarioAlvo ?? null]
-        );
-
-        return rows;
-    }
-
     /**
      * Trava a linha do usuário até o fim da transação: duas alterações simultâneas no
      * mesmo funcionário passam a acontecer uma depois da outra (a última vence, sem mistura).
@@ -175,6 +218,36 @@ export class PermissaoRepository {
             [usuarioId]
         );
         return rows.map((r) => r.permissao);
+    }
+
+    /** Ids dos funcionários de um tipo (ex.: todos os técnicos) da empresa. */
+    async idsPorTipo(empresaId: string, tipo: string): Promise<number[]> {
+        const { rows } = await pool.query(
+            `SELECT id FROM usuarios WHERE empresa_id = $1 AND role = $2 ORDER BY id`,
+            [empresaId, tipo]
+        );
+        return rows.map((r) => r.id);
+    }
+
+    /**
+     * Trava os funcionários (em ordem de id, pra não dar deadlock entre duas alterações em grupo)
+     * e devolve o estado deles. Só volta quem é da empresa informada.
+     */
+    async travarECarregarVarios(cliente: PoolClient, ids: number[], empresaId: string): Promise<UsuarioPermissoes[]> {
+        await cliente.query(
+            `SELECT id FROM usuarios WHERE id = ANY($1::int[]) AND empresa_id = $2 ORDER BY id FOR UPDATE`,
+            [ids, empresaId]
+        );
+
+        const { rows } = await cliente.query(
+            `${SELECT_USUARIO_COM_PERMISSOES}
+             WHERE u.id = ANY($1::int[]) AND u.empresa_id = $2
+             GROUP BY u.id
+             ORDER BY u.id`,
+            [ids, empresaId]
+        );
+
+        return rows;
     }
 
     /** Transação usada pelo serviço pra juntar substituição + auditoria. */

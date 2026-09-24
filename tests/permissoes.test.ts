@@ -68,10 +68,8 @@ describe("OPERADOR só abre e consulta", () => {
     ["atribuir técnico", "atribuir", { id_tecnico: 0 }],
     ["marcar como externa", "atribuir", { externo: true }],
     ["iniciar", "iniciar", {}],
-    ["pausar", "pausar", {}],
     ["finalizar", "finalizar", { resolucao: "x" }],
     ["cancelar", "cancelar", { motivo_cancelamento: "x" }],
-    ["mudar prioridade", "prioridade", { prioridade: "BAIXA" }],
   ];
 
   it.each(acoes)("não consegue %s (403) e a O.S. não muda", async (_nome, rota, corpo) => {
@@ -85,14 +83,6 @@ describe("OPERADOR só abre e consulta", () => {
     expect(depois.execucao_externa).toBe(false);
   });
 
-  it("não edita nem apaga O.S.", async () => {
-    const os = await novaOS();
-    const put = await operador()(request(app).put(`/ordens-servico/${os}`)).send({ maquina_id: fx.A.maquinaId, descricao: "HACK" });
-    const del = await operador()(request(app).delete(`/ordens-servico/${os}`));
-    expect(put.status).toBe(403);
-    expect(del.status).toBe(403);
-    expect((await ler(os)).descricao).toBe(`${fx.A.marcador}_os`);
-  });
 });
 
 describe("TECNICO só mexe no que é dele", () => {
@@ -125,11 +115,10 @@ describe("TECNICO só mexe no que é dele", () => {
     expect((await ler(os)).status).toBe("FINALIZADA");
   });
 
-  it("não inicia, pausa nem finaliza a O.S. de OUTRO técnico", async () => {
+  it("não inicia nem finaliza a O.S. de OUTRO técnico", async () => {
     const os = await novaOS({ status: "EM_ANDAMENTO", id_tecnico: fx.A.tecnico2Id });
     for (const [rota, corpo] of [
       ["iniciar", {}],
-      ["pausar", {}],
       ["finalizar", { resolucao: "x" }],
     ] as [string, object][]) {
       const res = await tecnico()(request(app).patch(`/ordens-servico/${os}/${rota}`)).send(corpo);
@@ -145,15 +134,10 @@ describe("TECNICO só mexe no que é dele", () => {
     expect(res.status).toBe(403);
   });
 
-  it("não cancela, não muda prioridade, não edita e não apaga", async () => {
+  it("não cancela", async () => {
     const os = await novaOS({ status: "EM_ANDAMENTO", id_tecnico: fx.A.tecnicoId });
     expect((await tecnico()(request(app).patch(`/ordens-servico/${os}/cancelar`)).send({ motivo_cancelamento: "x" })).status).toBe(403);
-    expect((await tecnico()(request(app).patch(`/ordens-servico/${os}/prioridade`)).send({ prioridade: "BAIXA" })).status).toBe(403);
-    expect((await tecnico()(request(app).put(`/ordens-servico/${os}`)).send({ maquina_id: fx.A.maquinaId, descricao: "H" })).status).toBe(403);
-    expect((await tecnico()(request(app).delete(`/ordens-servico/${os}`))).status).toBe(403);
-    const depois = await ler(os);
-    expect(depois.status).toBe("EM_ANDAMENTO");
-    expect(depois.prioridade).toBe("ALTA");
+    expect((await ler(os)).status).toBe("EM_ANDAMENTO");
   });
 
   it("O.S. inexistente devolve o erro normal de 'não encontrada', não 403", async () => {
@@ -179,7 +163,7 @@ describe("GESTOR e ADMIN têm acesso total", () => {
   it.each([
     ["GESTOR", gestor],
     ["ADMIN", admin],
-  ])("%s atribui, marca externa, muda prioridade, edita, cancela e apaga", async (_papel, quem) => {
+  ])("%s atribui, marca externa e cancela", async (_papel, quem) => {
     const a = await novaOS();
     expect((await quem()(request(app).patch(`/ordens-servico/${a}/atribuir`)).send({ id_tecnico: fx.A.tecnico2Id })).status).toBe(200);
 
@@ -187,22 +171,15 @@ describe("GESTOR e ADMIN têm acesso total", () => {
     expect((await quem()(request(app).patch(`/ordens-servico/${b}/atribuir`)).send({ externo: true })).status).toBe(200);
 
     const c = await novaOS();
-    expect((await quem()(request(app).patch(`/ordens-servico/${c}/prioridade`)).send({ prioridade: "BAIXA" })).status).toBe(200);
     expect((await quem()(request(app).patch(`/ordens-servico/${c}/cancelar`)).send({ motivo_cancelamento: "não precisa mais" })).status).toBe(200);
-
-    const d = await novaOS();
-    expect(
-      (await quem()(request(app).put(`/ordens-servico/${d}`)).send({
-        maquina_id: fx.A.maquinaId, descricao: "editada", status: "ABERTA", prioridade: "ALTA", tipo_manutencao: "CORRETIVA",
-      })).status
-    ).toBe(200);
-    expect((await quem()(request(app).delete(`/ordens-servico/${d}`))).status).toBe(204);
   });
 
-  it("gestor inicia e finaliza a O.S. (como no fluxo de técnico externo)", async () => {
+  it("gestor define o técnico externo (a O.S. já fica em andamento) e finaliza; não inicia atendimento", async () => {
     const os = await novaOS();
-    await gestor()(request(app).patch(`/ordens-servico/${os}/atribuir`)).send({ externo: true });
-    expect((await gestor()(request(app).patch(`/ordens-servico/${os}/iniciar`))).status).toBe(200);
+    const def = await gestor()(request(app).patch(`/ordens-servico/${os}/atribuir`)).send({ externo: true });
+    expect(def.status).toBe(200);
+    expect(def.body.status).toBe("EM_ANDAMENTO");
+    expect((await gestor()(request(app).patch(`/ordens-servico/${os}/iniciar`))).status).toBe(403);
     const fim = await gestor()(request(app).patch(`/ordens-servico/${os}/finalizar`)).send({
       resolucao: "ok", id_parceiro: fx.A.parceiroId, valor_parceiro: 5,
     });

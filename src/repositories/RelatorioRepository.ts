@@ -209,7 +209,9 @@ export class RelatorioRepository {
 
           os.id_parceiro,
 
-          os.valor_parceiro
+          os.valor_parceiro,
+
+          COALESCE(os.tempo_pausado_segundos, 0) AS tempo_pausado_segundos
 
 
         FROM ordens_servico os
@@ -452,6 +454,15 @@ export class RelatorioRepository {
 
 
             /* =========================
+               OS PAUSADAS (em andamento, mas paradas agora)
+            ========================= */
+
+            COUNT(*) FILTER (
+              WHERE os.status = 'PAUSADA'
+            ) AS os_pausadas,
+
+
+            /* =========================
                OS FINALIZADAS
             ========================= */
 
@@ -498,7 +509,7 @@ export class RelatorioRepository {
       -
       os.data_inicio_atendimento
     )
-  )
+  ) - COALESCE(os.tempo_pausado_segundos, 0)
 ) FILTER (
 
               WHERE
@@ -672,6 +683,8 @@ export class RelatorioRepository {
           i.os_atribuidas,
 
           i.os_em_andamento,
+
+          i.os_pausadas,
 
           i.os_finalizadas,
 

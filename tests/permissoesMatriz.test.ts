@@ -144,8 +144,6 @@ const casos: Caso[] = [
     permissao: "os.criar",
     preparar: async () => ({ metodo: "post", url: "/ordens-servico", corpo: { maquina_id: fx.A.maquinaId, descricao: `${fx.A.marcador}_nova`, tipo_manutencao: "CORRETIVA", prioridade: "MEDIA" } }),
   },
-  { nome: "PUT /ordens-servico/:id", permissao: "os.editar", preparar: async () => ({ metodo: "put", url: `/ordens-servico/${await novaOS()}`, corpo: { maquina_id: fx.A.maquinaId, descricao: "editada" } }) },
-  { nome: "DELETE /ordens-servico/:id", permissao: "os.excluir", preparar: async () => ({ metodo: "delete", url: `/ordens-servico/${await novaOS()}` }) },
   {
     nome: "atribuir a outro técnico",
     permissao: "os.atribuir",
@@ -169,7 +167,7 @@ const casos: Caso[] = [
   {
     nome: "pausar (na O.S. dele)",
     permissao: "os.pausar",
-    preparar: async (u) => ({ metodo: "patch", url: `/ordens-servico/${await novaOS({ status: "EM_ANDAMENTO", id_tecnico: u.id })}/pausar`, corpo: {} }),
+    preparar: async (u) => ({ metodo: "patch", url: `/ordens-servico/${await novaOS({ status: "EM_ANDAMENTO", id_tecnico: u.id })}/pausar`, corpo: { motivo: "aguardando peça" } }),
   },
   {
     nome: "finalizar (na O.S. dele)",
@@ -177,7 +175,6 @@ const casos: Caso[] = [
     preparar: async (u) => ({ metodo: "patch", url: `/ordens-servico/${await novaOS({ status: "EM_ANDAMENTO", id_tecnico: u.id })}/finalizar`, corpo: { resolucao: "ok" } }),
   },
   { nome: "cancelar", permissao: "os.cancelar", preparar: async () => ({ metodo: "patch", url: `/ordens-servico/${await novaOS()}/cancelar`, corpo: { motivo_cancelamento: "x" } }) },
-  { nome: "alterar prioridade", permissao: "os.alterar_prioridade", preparar: async () => ({ metodo: "patch", url: `/ordens-servico/${await novaOS()}/prioridade`, corpo: { prioridade: "BAIXA" } }) },
 
   { nome: "GET /monitoramento/alertas", permissao: "monitoramento.ver", preparar: async () => ({ metodo: "get", url: "/monitoramento/alertas" }) },
   { nome: "GET /monitoramento/pendentes", permissao: "monitoramento.ver", preparar: async () => ({ metodo: "get", url: "/monitoramento/pendentes" }) },
@@ -393,7 +390,7 @@ describe("escopo das O.S.: ver todas × só as minhas", () => {
   });
 });
 
-describe("dono da O.S.: iniciar / pausar / finalizar", () => {
+describe("dono da O.S.: iniciar / finalizar", () => {
   it("o técnico responsável age na O.S. dele; na de outro técnico não", async () => {
     const tec = await criarUsuarioTeste(fx.A, { role: "TECNICO", permissoes: ["os.ver", "os.iniciar"] });
     const dele = await novaOS({ status: "ATRIBUIDA", id_tecnico: tec.id });
@@ -408,7 +405,7 @@ describe("dono da O.S.: iniciar / pausar / finalizar", () => {
   });
 
   it("com 'agir em O.S. de outros' age nas de qualquer técnico e nas externas", async () => {
-    const chefe = await criarUsuarioTeste(fx.A, { role: "GESTOR", permissoes: ["os.ver", "os.iniciar", "os.agir_em_qualquer"] });
+    const chefe = await criarUsuarioTeste(fx.A, { role: "TECNICO", permissoes: ["os.ver", "os.iniciar", "os.agir_em_qualquer"] });
     const doOutro = await novaOS({ status: "ATRIBUIDA", id_tecnico: fx.A.tecnicoId });
     const externa = await novaOS({ status: "ATRIBUIDA", externa: true });
 
@@ -497,7 +494,8 @@ describe("padrão automático para funcionários existentes (migração preguiç
 
     expect(pop).toEqual(expect.arrayContaining(["os.ver", "os.criar"]));
     expect(pop).not.toContain("os.iniciar");
-    expect(pge.length).toBe(TODAS_PERMISSOES.length);
+    // o gestor recebe tudo, menos assumir/iniciar/pausar (não faz manutenção)
+    expect(pge.length).toBe(TODAS_PERMISSOES.length - 3);
   });
 
   it("o administrador (dono) tem todas, mesmo sem nenhuma linha no banco", async () => {

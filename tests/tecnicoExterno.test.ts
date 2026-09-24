@@ -77,7 +77,9 @@ describe("atribuir execução externa", () => {
     const os = await ler(osExterna);
     expect(os.execucao_externa).toBe(true);
     expect(os.id_tecnico).toBeNull();
-    expect(os.status).toBe("ATRIBUIDA");
+    // o parceiro já está executando: vai direto para "em andamento" (o gestor não "inicia" atendimento)
+    expect(os.status).toBe("EM_ANDAMENTO");
+    expect(os.data_inicio_atendimento).not.toBeNull();
     expect(os.id_atribuido_por).toBe(fx.A.adminId);
     expect(os.data_atribuicao).not.toBeNull();
 
@@ -94,18 +96,10 @@ describe("atribuir execução externa", () => {
 });
 
 describe("finalizar O.S. externa", () => {
-  it("não finaliza sem iniciar (transição continua valendo)", async () => {
-    const res = await comoA(request(app).patch(`/ordens-servico/${osExterna}/finalizar`)).send({
-      resolucao: "feito",
-      id_parceiro: fx.A.parceiroId,
-    });
-    expect(res.status).toBe(400);
-    expect((await ler(osExterna)).status).toBe("ATRIBUIDA");
-  });
-
-  it("inicia atendimento (como o front faz logo após marcar externa)", async () => {
+  it("a O.S. externa já nasce em andamento: não precisa (nem pode) iniciar de novo", async () => {
+    expect((await ler(osExterna)).status).toBe("EM_ANDAMENTO");
     const res = await comoA(request(app).patch(`/ordens-servico/${osExterna}/iniciar`));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     expect((await ler(osExterna)).status).toBe("EM_ANDAMENTO");
   });
 
@@ -221,7 +215,6 @@ describe("outra empresa usa técnico externo sem nenhuma configuração", () => 
     const os = await novaOS(fx.B, `${fx.B.marcador}_os_externa`);
 
     expect((await comoB(request(app).patch(`/ordens-servico/${os}/atribuir`)).send({ externo: true })).status).toBe(200);
-    expect((await comoB(request(app).patch(`/ordens-servico/${os}/iniciar`))).status).toBe(200);
     const fim = await comoB(request(app).patch(`/ordens-servico/${os}/finalizar`)).send({
       resolucao: "ok",
       id_parceiro: fx.B.parceiroId,

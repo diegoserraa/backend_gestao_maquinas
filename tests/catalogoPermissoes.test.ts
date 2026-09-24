@@ -72,9 +72,10 @@ describe("normalizar (dependências automáticas)", () => {
         expect(normalizar(["os.ver", "os.cancelar"]).adicionadas).toEqual([]);
     });
 
-    it("definir externo traz iniciar e agir em O.S. de outros", () => {
+    it("definir externo traz agir em O.S. de outros (o gestor não inicia: quem define o externo não precisa de 'iniciar')", () => {
         const { final } = normalizar(["os.definir_externo"]);
-        expect(final).toEqual(expect.arrayContaining(["os.iniciar", "os.agir_em_qualquer", "os.ver_proprias"]));
+        expect(final).toEqual(expect.arrayContaining(["os.agir_em_qualquer", "os.ver_proprias"]));
+        expect(final).not.toContain("os.iniciar");
     });
 
     it("abrir O.S. pelo alerta traz ver monitoramento e abrir O.S.", () => {
@@ -104,9 +105,14 @@ describe("padrões por tipo de funcionário", () => {
         }
     });
 
-    it("gestor tem tudo; admin (dono) também", () => {
-        expect(padraoDoPapel("GESTOR").length).toBe(TODAS_PERMISSOES.length);
+    it("admin (dono) tem tudo; gestor tem tudo MENOS assumir/iniciar/pausar (não faz manutenção)", () => {
         expect(padraoDoPapel("ADMIN").length).toBe(TODAS_PERMISSOES.length);
+
+        const vedadas = ["os.assumir", "os.iniciar", "os.pausar"];
+        const gestor = padraoDoPapel("GESTOR");
+        expect(gestor.length).toBe(TODAS_PERMISSOES.length - vedadas.length);
+        for (const p of vedadas) expect(gestor).not.toContain(p);
+        for (const p of ["os.atribuir", "os.cancelar", "os.finalizar", "os.definir_externo", "os.agir_em_qualquer"]) expect(gestor).toContain(p);
     });
 
     it("técnico e operador NÃO têm acesso a Usuários nem Relatórios, nem podem cancelar O.S.", () => {
@@ -121,8 +127,8 @@ describe("padrões por tipo de funcionário", () => {
         }
     });
 
-    it("técnico executa O.S. (assumir/iniciar/pausar/finalizar); operador só abre", () => {
-        expect(padraoDoPapel("TECNICO")).toEqual(expect.arrayContaining(["os.assumir", "os.iniciar", "os.pausar", "os.finalizar"]));
+    it("técnico executa O.S. (assumir/iniciar/finalizar); operador só abre", () => {
+        expect(padraoDoPapel("TECNICO")).toEqual(expect.arrayContaining(["os.assumir", "os.iniciar", "os.finalizar"]));
         expect(padraoDoPapel("OPERADOR")).toEqual(expect.arrayContaining(["os.ver", "os.criar"]));
         expect(padraoDoPapel("OPERADOR")).not.toContain("os.iniciar");
     });
