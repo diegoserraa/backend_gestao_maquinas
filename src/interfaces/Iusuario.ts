@@ -9,4 +9,7 @@ export interface IUsuario {
     role: Role;
     ativo?: boolean;
     created_at?: Date;
+  deve_trocar_senha?: boolean;
+  versao_sessao?: number;
+  ultimo_acesso?: Date | null;
 }

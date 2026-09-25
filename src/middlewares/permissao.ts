@@ -9,6 +9,8 @@ import { TokenPayload } from "../types/auth";
  *  - barra usuário apagado/desativado NA HORA, mesmo com token ainda dentro da validade;
  *  - usa o papel e as permissões do banco (mudança do gestor vale no próximo clique).
  */
+const ROTAS_COM_SENHA_TEMPORARIA = ["/conta/senha", "/permissoes/eu"];
+
 export async function carregarPerfil(req: Request, res: Response, next: NextFunction) {
     const perfil = await permissaoService.perfil(req.user!.id);
 
@@ -20,11 +22,30 @@ export async function carregarPerfil(req: Request, res: Response, next: NextFunc
         return res.status(401).json({ error: "Usuário inativo" });
     }
 
+    // a senha foi trocada depois que este token nasceu (outro aparelho, token vazado): sessão encerrada
+    if ((req.user!.sv ?? 0) !== perfil.versaoSessao) {
+        return res.status(401).json({ error: "Sua senha foi alterada. Entre novamente.", codigo: "SESSAO_ENCERRADA" });
+    }
+
+    // empresa inativada pelo dono do sistema: ninguém dela acessa, nem com token ainda válido
+    if (!perfil.empresaAtiva) {
+        return res.status(401).json({ error: "Empresa inativa. Fale com o suporte.", codigo: "EMPRESA_INATIVA" });
+    }
+
+    // senha temporária (conta criada pelo painel): até trocar, só a própria troca de senha e a leitura do perfil
+    if (perfil.deveTrocarSenha && !ROTAS_COM_SENHA_TEMPORARIA.includes(req.path)) {
+        return res.status(403).json({ error: "Troque a senha temporária para continuar", codigo: "TROCAR_SENHA" });
+    }
+
     req.user!.role = perfil.role as TokenPayload["role"];
     req.permissoes = perfil.permissoes;
 
     next();
 }
+
+/** Só o dono do sistema (administrador): painel de empresas. Nenhum outro tipo entra, nem com permissões. */
+export const exigirAdmin: RequestHandler = (req, res, next) =>
+    req.user!.role === "ADMIN" ? next() : res.status(403).json({ error: "Acesso negado" });
 
 const negar = (res: Response, necessarias: string[]) =>
     res.status(403).json({ error: "Acesso negado", permissao_necessaria: necessarias });

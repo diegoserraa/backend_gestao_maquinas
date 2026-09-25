@@ -23,6 +23,11 @@ export interface Perfil {
     empresaId: string;
     role: string;
     ativo: boolean;
+    /** a empresa está ativa? (inativada pelo dono do sistema: ninguém dela acessa) */
+    empresaAtiva: boolean;
+    /** senha temporária: só pode trocar a senha até fazer isso */
+    deveTrocarSenha: boolean;
+    versaoSessao: number;
     permissoes: ReadonlySet<string>;
     expiraEm: number;
 }
@@ -107,6 +112,9 @@ export class PermissaoService {
             empresaId: usuario.empresa_id,
             role: usuario.role,
             ativo: usuario.ativo,
+            empresaAtiva: usuario.empresa_ativa !== false,
+            deveTrocarSenha: usuario.deve_trocar_senha === true,
+            versaoSessao: usuario.versao_sessao ?? 0,
             // ADMIN (dono do sistema) tem tudo, sempre
             permissoes: usuario.role === "ADMIN" ? TODAS : new Set(sanearPorPapel(usuario.role, soValidas(usuario.permissoes))),
             expiraEm: Date.now() + TTL_MS,
@@ -120,6 +128,19 @@ export class PermissaoService {
         this.cache.delete(usuarioId);
         // conexões de tempo real desse usuário nascem com as permissões antigas: refaz
         reavaliarUsuario(usuarioId);
+    }
+
+    /**
+     * A situação da empresa mudou (inativada/reativada): esquece o cache de todo mundo dela e derruba as
+     * conexões de tempo real. A próxima requisição já enxerga a situação nova (sem esperar o cache expirar).
+     */
+    invalidarEmpresa(empresaId: string): void {
+        for (const [usuarioId, perfil] of this.cache) {
+            if (perfil.empresaId === empresaId) {
+                this.cache.delete(usuarioId);
+                reavaliarUsuario(usuarioId);
+            }
+        }
     }
 
     invalidarTodos(): void {

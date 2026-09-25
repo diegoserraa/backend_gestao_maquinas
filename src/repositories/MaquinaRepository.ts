@@ -225,6 +225,7 @@ async buscarPorDataProximaManutencao(
         FROM maquinas
         WHERE proxima_manutencao = $1
         AND status = 'ativa'
+        AND empresa_id IN (SELECT id FROM empresas WHERE ativo)
         `,
         [
             data

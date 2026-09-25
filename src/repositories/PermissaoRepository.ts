@@ -8,6 +8,12 @@ export interface UsuarioPermissoes {
     role: string;
     ativo: boolean;
     empresa_id: string;
+    /** a empresa do usuário está ativa? (o dono do sistema pode inativar uma empresa inteira) */
+    empresa_ativa: boolean;
+    /** senha temporária: precisa trocar antes de usar o sistema */
+    deve_trocar_senha: boolean;
+    /** sobe quando a senha é trocada: tokens de versão antiga deixam de valer */
+    versao_sessao: number;
     inicializadas: boolean;
     /** true = ajustado individualmente (tem prioridade sobre as alterações em grupo) */
     personalizadas: boolean;
@@ -17,11 +23,15 @@ export interface UsuarioPermissoes {
 const SELECT_USUARIO_COM_PERMISSOES = `
     SELECT
         u.id, u.nome, u.email, u.role, u.ativo, u.empresa_id,
+        e.ativo AS empresa_ativa,
+        u.deve_trocar_senha,
+        u.versao_sessao,
         u.permissoes_inicializadas AS inicializadas,
         u.permissoes_personalizadas AS personalizadas,
         COALESCE(array_agg(p.permissao) FILTER (WHERE p.permissao IS NOT NULL), '{}') AS permissoes
     FROM usuarios u
     LEFT JOIN usuario_permissoes p ON p.usuario_id = u.id
+    JOIN empresas e ON e.id = u.empresa_id
 `;
 
 export class PermissaoRepository {
@@ -29,7 +39,7 @@ export class PermissaoRepository {
     /** Usuário + permissões numa consulta só (sem filtro de empresa: quem chama confere). */
     async carregar(usuarioId: number): Promise<UsuarioPermissoes | null> {
         const { rows } = await pool.query(
-            `${SELECT_USUARIO_COM_PERMISSOES} WHERE u.id = $1 GROUP BY u.id`,
+            `${SELECT_USUARIO_COM_PERMISSOES} WHERE u.id = $1 GROUP BY u.id, e.id`,
             [usuarioId]
         );
 
@@ -242,7 +252,7 @@ export class PermissaoRepository {
         const { rows } = await cliente.query(
             `${SELECT_USUARIO_COM_PERMISSOES}
              WHERE u.id = ANY($1::int[]) AND u.empresa_id = $2
-             GROUP BY u.id
+             GROUP BY u.id, e.id
              ORDER BY u.id`,
             [ids, empresaId]
         );

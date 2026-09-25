@@ -45,6 +45,7 @@ export interface Fixture {
 }
 
 const TABELAS_POR_EMPRESA = [
+  "auditoria_admin",
   "auditoria_permissoes",
   "usuario_permissoes",
   "telemetria_alertas",

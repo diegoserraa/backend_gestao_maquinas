@@ -32,6 +32,26 @@ export class UsuarioRepository {
         return rows[0] ?? null;
     }
 
+    // hash da senha (só para conferir a senha atual na troca de senha)
+    async buscarSenhaHash(id: number): Promise<string | null> {
+        const { rows } = await pool.query(`SELECT senha FROM usuarios WHERE id = $1`, [id]);
+        return rows[0]?.senha ?? null;
+    }
+
+    // nova senha: encerra a condição de "senha temporária" e a sessão de qualquer token antigo (devolve a versão nova)
+    async atualizarSenha(id: number, senhaHash: string): Promise<number> {
+        const { rows } = await pool.query(
+            `UPDATE usuarios SET senha = $1, deve_trocar_senha = false, versao_sessao = versao_sessao + 1
+              WHERE id = $2 RETURNING versao_sessao`,
+            [senhaHash, id]
+        );
+        return rows[0].versao_sessao;
+    }
+
+    async registrarAcesso(id: number): Promise<void> {
+        await pool.query(`UPDATE usuarios SET ultimo_acesso = now() WHERE id = $1`, [id]);
+    }
+
     async criar(user: IUsuario): Promise<IUsuario> {
         const { rows } = await pool.query(
             `

@@ -59,7 +59,7 @@ async function aceitar(req: IncomingMessage, socket: Duplex, head: Buffer, url: 
     // mesma regra da API: usuário ativo, da mesma empresa do token
     const perfil = await permissaoService.perfil(payload.id).catch(() => null);
 
-    if (!perfil || !perfil.ativo || perfil.empresaId !== payload.empresa_id) {
+    if (!perfil || !perfil.ativo || !perfil.empresaAtiva || perfil.empresaId !== payload.empresa_id || (payload.sv ?? 0) !== perfil.versaoSessao) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
         return;

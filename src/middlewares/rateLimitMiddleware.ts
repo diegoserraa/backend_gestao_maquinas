@@ -42,3 +42,35 @@ export const loginLimiter = rateLimit({
     skipSuccessfulRequests: true,
     handler: logBloqueio("login"),
 });
+
+/**
+ * Limite de tentativas de trocar a própria senha (10 a cada 15 min por usuário): a senha atual é
+ * pedida justamente para que uma sessão esquecida aberta não baste para tomar a conta, e este
+ * limite impede adivinhá-la. Vale também nos testes automatizados (a menos que se peça o contrário).
+ */
+export function limitadorDeTrocaDeSenha(limite = Number(process.env.TROCA_SENHA_LIMITE) || 10, janelaMs = 15 * 60 * 1000) {
+    return rateLimit({
+        windowMs: janelaMs,
+        limit: limite,
+        standardHeaders: true,
+        legacyHeaders: false,
+        keyGenerator: (req) => `senha:${req.user?.id ?? "anonimo"}`,
+        handler: logBloqueio("troca-de-senha"),
+    });
+}
+
+/**
+ * Limite para AÇÕES do painel do administrador que criam coisas (empresas): mesmo com o token certo,
+ * um token vazado não pode sair cadastrando empresas em massa. Conta por usuário (não por IP).
+ * No teste automatizado o limite geral é ignorado, mas este vale (a menos que se peça o contrário).
+ */
+export function limitadorDeCriacaoAdmin(limite = Number(process.env.ADMIN_CRIACAO_LIMITE) || 30, janelaMs = 60 * 60 * 1000) {
+    return rateLimit({
+        windowMs: janelaMs,
+        limit: limite,
+        standardHeaders: true,
+        legacyHeaders: false,
+        keyGenerator: (req) => `admin:${req.user?.id ?? "anonimo"}`,
+        handler: logBloqueio("api-admin"),
+    });
+}

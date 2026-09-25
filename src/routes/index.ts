@@ -13,6 +13,8 @@ import { relatorioRoutes } from "./relatorio.routes";
 import { telemetriaRoutes } from "./telemetria.routes";
 import { monitoramentoRoutes } from "./monitoramento.routes";
 import { permissaoRoutes } from "./permissao.routes";
+import { adminRoutes } from "./admin.routes";
+import { contaRoutes } from "./conta.routes";
 const router = Router();
 
 router.use("/maquinas",maquinaRoutes);
@@ -29,5 +31,7 @@ router.use('/relatorios', relatorioRoutes)
 router.use('/telemetria', telemetriaRoutes);
 router.use('/monitoramento', monitoramentoRoutes);
 router.use('/permissoes', permissaoRoutes);
+router.use('/conta', contaRoutes);
+router.use('/admin', adminRoutes);
 
 export { router };

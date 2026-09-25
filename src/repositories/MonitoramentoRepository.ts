@@ -224,6 +224,7 @@ export class MonitoramentoRepository {
             FROM maquinas m
             LEFT JOIN telemetria_atual t ON t.maquina_id = m.id
             WHERE t.atualizado_em IS NOT NULL
+              AND m.empresa_id IN (SELECT id FROM empresas WHERE ativo)
               AND t.atualizado_em < now() - ($1 || ' minutes')::interval
               AND NOT EXISTS (
                   SELECT 1 FROM telemetria_alertas a
