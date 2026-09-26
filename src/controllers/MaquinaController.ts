@@ -21,6 +21,28 @@ export class MaquinaController {
         return responderPagina(res, itens, total);
     };
 
+    /** Etiquetas (QR Code + identificação) para imprimir: ?ids=1,2,3 e/ou ?setor_id=4. */
+    etiquetas = async (req: Request, res: Response) => {
+        const inteiroPositivo = (v: string) => /^[0-9]{1,9}$/.test(v) && Number(v) > 0;
+
+        const bruto = typeof req.query.ids === "string" ? req.query.ids.split(",").map((v) => v.trim()) : undefined;
+        if (req.query.ids !== undefined && (bruto === undefined || bruto.length === 0 || !bruto.every(inteiroPositivo))) {
+            return res.status(400).json({ error: "Informe as máquinas como números separados por vírgula" });
+        }
+
+        const setor = req.query.setor_id;
+        if (setor !== undefined && !(typeof setor === "string" && inteiroPositivo(setor))) {
+            return res.status(400).json({ error: "Setor inválido" });
+        }
+
+        return res.json(
+            await this.service.gerarEtiquetas(req.empresaId!, {
+                ids: bruto ? [...new Set(bruto.map(Number))] : undefined,
+                setorId: setor ? Number(setor) : undefined,
+            })
+        );
+    };
+
     buscarPorId = async (
         req: Request,
         res: Response

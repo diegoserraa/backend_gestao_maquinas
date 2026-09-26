@@ -45,6 +45,30 @@ export class MaquinaRepository {
         );
     }
 
+    /** Dados mínimos para imprimir etiquetas (só da empresa; opcionalmente uma seleção ou um setor). */
+    async listarParaEtiquetas(
+        empresaId: string,
+        filtro: { ids?: number[]; setorId?: number },
+        limite: number
+    ): Promise<{ id: number; nome: string; setor: string | null; empresa: string }[]> {
+        const { rows } = await pool.query(
+            `
+            SELECT m.id, m.nome, s.nome AS setor, e.nome AS empresa
+              FROM maquinas m
+              JOIN empresas e ON e.id = m.empresa_id
+              LEFT JOIN setores s ON s.id = m.setor_id AND s.empresa_id = m.empresa_id
+             WHERE m.empresa_id = $1
+               AND ($2::int[] IS NULL OR m.id = ANY($2::int[]))
+               AND ($3::int IS NULL OR m.setor_id = $3)
+             ORDER BY s.nome NULLS LAST, m.nome, m.id
+             LIMIT $4
+            `,
+            [empresaId, filtro.ids ?? null, filtro.setorId ?? null, limite]
+        );
+
+        return rows;
+    }
+
     async buscarPorId(id: number, empresaId: string): Promise<IMaquina | null> {
 
         const { rows } = await pool.query(

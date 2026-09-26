@@ -15,6 +15,8 @@ const maquinaController = new MaquinaController();
 const lerMaquinas = exigirQualquer(LEITURA_DE_APOIO.maquinas);
 
 maquinaRoutes.get("/", lerMaquinas, maquinaController.listar);
+// etiquetas para imprimir (antes de "/:id"): quem cadastra máquinas é quem imprime os QR Codes
+maquinaRoutes.get("/etiquetas", exigir("maquinas.criar"), maquinaController.etiquetas);
 maquinaRoutes.get("/:id", lerMaquinas, maquinaController.buscarPorId);
 
 // a permissão vem ANTES do upload: quem não pode não chega a enviar arquivo

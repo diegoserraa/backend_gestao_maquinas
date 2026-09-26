@@ -4,6 +4,12 @@ import { SetorRepository } from "../repositories/SetorRepository";
 import { Pagina } from "../utils/paginacao";
 import { supabase } from "../config/supabase";
 import QRCode from "qrcode";
+import { baseDoFront, enderecoDeTeste, urlDaMaquina } from "../utils/urlFront";
+import { ErroHttp, invalido, naoEncontrado } from "../utils/erros";
+import { logger } from "../config/logger";
+
+/** Teto por pedido: uma folha A4 de etiquetas tem dezenas; centenas já é trabalho para separar por setor. */
+export const LIMITE_ETIQUETAS = 500;
 
 export class MaquinaService {
 
@@ -14,6 +20,49 @@ export class MaquinaService {
         if (setorId == null) return;
         const setor = await this.setorRepository.buscarPorId(Number(setorId), empresaId);
         if (!setor) throw new Error("Setor não encontrado");
+    }
+
+    /**
+     * Etiquetas para imprimir e colar nas máquinas. O QR é gerado AGORA, a partir do endereço configurado
+     * (FRONTEND_URL), e não reaproveitado do cadastro: se o endereço mudar, a próxima impressão já sai certa.
+     * Só máquinas da própria empresa.
+     */
+    async gerarEtiquetas(empresaId: string, filtro: { ids?: number[]; setorId?: number }) {
+        const base = baseDoFront();
+
+        if (!base) {
+            throw new ErroHttp(503, "O endereço do sistema (FRONTEND_URL) não está configurado no servidor.");
+        }
+
+        const maquinas = await this.repository.listarParaEtiquetas(empresaId, filtro, LIMITE_ETIQUETAS + 1);
+
+        if (maquinas.length > LIMITE_ETIQUETAS) {
+            throw invalido(`Muitas máquinas de uma vez (máximo ${LIMITE_ETIQUETAS}). Filtre por setor.`);
+        }
+
+        if (filtro.ids && maquinas.length === 0) throw naoEncontrado("Máquina não encontrada");
+
+        const itens = await Promise.all(
+            maquinas.map(async (m) => {
+                const url = urlDaMaquina(base, m.id);
+
+                return {
+                    id: m.id,
+                    nome: m.nome,
+                    setor: m.setor,
+                    url,
+                    // correção de erro alta: continua lendo com sujeira e desgaste
+                    qr: await QRCode.toDataURL(url, { errorCorrectionLevel: "H", margin: 1, width: 400 }),
+                };
+            })
+        );
+
+        return {
+            base_url: base,
+            endereco_de_teste: enderecoDeTeste(base),
+            empresa: maquinas[0]?.empresa ?? null,
+            itens,
+        };
     }
 
     async listar(empresaId: string, pagina: Pagina) {
@@ -86,18 +135,21 @@ export class MaquinaService {
         );
     }
 
-    // 3. gera QR Code
-    const urlMaquina =
-        `${process.env.FRONTEND_URL}/machines/${maquinaCriada.id}`;
+    // 3. gera QR Code (sem endereço configurado não grava um QR quebrado; a impressão gera o QR na hora)
+    const baseFront = baseDoFront();
+    let qrCodeBase64: string | undefined;
 
-    const qrCodeBase64 =
-        await QRCode.toDataURL(urlMaquina);
+    if (baseFront) {
+        qrCodeBase64 = await QRCode.toDataURL(urlDaMaquina(baseFront, maquinaCriada.id!));
 
-    await this.repository.atualizarQrCode(
-        maquinaCriada.id!,
-        qrCodeBase64,
-        empresaId
-    );
+        await this.repository.atualizarQrCode(
+            maquinaCriada.id!,
+            qrCodeBase64,
+            empresaId
+        );
+    } else {
+        logger.warn({ maquinaId: maquinaCriada.id }, "FRONTEND_URL não configurada: QR Code não gravado no cadastro");
+    }
 
     // 4. retorno final
     return {
