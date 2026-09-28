@@ -110,17 +110,25 @@ export class DashboardRepository {
             ) AS os_finalizadas,
 
             COUNT(*) FILTER(
+                WHERE os.status = 'CANCELADA'
+            ) AS os_canceladas,
+
+            -- "preventivas"/"corretivas" contam por tipo, mas sem as canceladas: uma
+            -- O.S. cancelada não é mais um trabalho preventivo/corretivo em aberto ou
+            -- concluído, é só um registro que não vingou — ela tem card próprio.
+            COUNT(*) FILTER(
                 WHERE os.tipo_manutencao = 'PREVENTIVA'
+                  AND os.status <> 'CANCELADA'
             ) AS preventivas,
 
             COUNT(*) FILTER(
                 WHERE os.tipo_manutencao = 'CORRETIVA'
+                  AND os.status <> 'CANCELADA'
             ) AS corretivas
 
             FROM ordens_servico os
 
-            WHERE os.status <> 'CANCELADA'
-              AND os.empresa_id = $1
+            WHERE os.empresa_id = $1
 
             ${filtro.where}
 
