@@ -30,6 +30,7 @@ export interface ITelemetriaAtualComMaquina {
     maquina_id: number;
     empresa_id: string;
     maquina_nome: string | null;
+    imagem_url: string | null;
     setor_id: number | null;
     setor_nome: string | null;
     status: string | null;
