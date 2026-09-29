@@ -13,7 +13,12 @@ export const osCriarSchema = z.object({
     id_tecnico: inteiroPositivoOpcional,
     id_solicitante: inteiroPositivoOpcional,
     resolucao: textoOpcional(2000),
-});
+    maquina_parada: z.boolean().optional(),
+    motivo_parada: textoOpcional(1000),
+}).refine(
+    (dados) => !dados.maquina_parada || !!dados.motivo_parada,
+    { message: "Informe o motivo da parada", path: ["motivo_parada"] }
+);
 
 // Ou um técnico da empresa, ou "execução externa" (parceiro) — nunca os dois.
 // Quem atribuiu vem do token, não do corpo.

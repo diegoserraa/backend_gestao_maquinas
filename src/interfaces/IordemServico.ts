@@ -32,6 +32,11 @@ export interface IOrdemServico {
   pausa_atual_segundos?: number;
   // só na leitura: nome de quem abriu a O.S.
   solicitante_nome?: string | null;
+
+  // "máquina parada" — respondido só na abertura (v1 enxuto, sem histórico de
+  // janelas); duração sempre calculada na consulta, nunca guardada aqui
+  maquina_parada?: boolean;
+  motivo_parada?: string | null;
 }
 
 export interface IPausaOS {

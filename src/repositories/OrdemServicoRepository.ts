@@ -53,9 +53,11 @@ export class OrdemServicoRepository {
       prioridade,
       id_tecnico,
       id_solicitante,
-      empresa_id
+      empresa_id,
+      maquina_parada,
+      motivo_parada
     )
-    VALUES ($1,$2,$3,$4,$5,COALESCE($6, NOW()),$7,$8,$9,$10,$11)
+    VALUES ($1,$2,$3,$4,$5,COALESCE($6, NOW()),$7,$8,$9,$10,$11,$12,$13)
     RETURNING *
     `,
     [
@@ -70,6 +72,8 @@ export class OrdemServicoRepository {
       os.id_tecnico ?? null,
       os.id_solicitante ?? null,
       empresaId,
+      os.maquina_parada ?? false,
+      os.maquina_parada ? os.motivo_parada ?? null : null,
     ]
   );
 

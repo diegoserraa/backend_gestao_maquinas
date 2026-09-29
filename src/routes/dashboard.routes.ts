@@ -63,6 +63,14 @@ dashboardRoutes.get(
     dashboardController.alertas
 );
 
+// contagem "parada agora" + soma "horas paradas no período" — não confundir
+// com /gestor/maquinas-paradas (esse é ranking por Nº de chamados, outro dado)
+dashboardRoutes.get(
+    "/gestor/resumo-paradas",
+    apenasAdminGestor,
+    dashboardController.resumoParadas
+);
+
 
 // =========================
 // TECNICO

@@ -329,6 +329,38 @@ export class DashboardController {
 
 
 
+    resumoParadas = async (
+        req: Request,
+        res: Response
+    ) => {
+
+        try {
+
+            const { dataInicio, dataFim } = req.query;
+
+            const dados =
+                await this.service.obterResumoParadas(
+                    dataInicio as string,
+                    dataFim as string,
+                    req.empresaId!
+                );
+
+            return res.json(dados);
+
+        } catch (error) {
+
+            return res.status(500).json({
+                erro: "Erro ao buscar resumo de máquinas paradas",
+                detalhes: error
+            });
+
+        }
+
+    };
+
+
+
+
     // =========================
     // TECNICO
     // =========================

@@ -325,4 +325,21 @@ async obterDashboardTecnico(tecnicoId: number, empresaId: string) {
 
 
 
+
+    async obterResumoParadas(
+        dataInicio: string | undefined,
+        dataFim: string | undefined,
+        empresaId: string
+    ) {
+
+        return this.repository.obterResumoParadas(
+            dataInicio,
+            dataFim,
+            empresaId
+        );
+
+    }
+
+
+
 }

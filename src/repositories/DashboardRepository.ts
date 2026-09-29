@@ -1165,4 +1165,65 @@ async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
     }
 
 
+
+
+    // "Máquina parada" (v1 enxuto): duração nunca é guardada, sempre calculada
+    // na consulta — da abertura até resolução/cancelamento, ou até agora se
+    // ainda aberta. "paradas agora" não usa o filtro de período (é sempre o
+    // estado atual); "horasParadas" usa o mesmo filtro de data_abertura que
+    // o resto do dashboard, pra ficar consistente com os outros cards.
+    async obterResumoParadas(
+        dataInicio?: string,
+        dataFim?: string,
+        empresaId?: string
+    ) {
+
+
+        const agora = await pool.query(
+            `
+            SELECT COUNT(*)::int AS total
+            FROM ordens_servico
+            WHERE empresa_id = $1
+              AND maquina_parada = true
+              AND status NOT IN ('FINALIZADA', 'CANCELADA')
+            `,
+            [empresaId]
+        );
+
+
+        const filtro =
+            this.montarFiltroPeriodo(
+                dataInicio,
+                dataFim,
+                "data_abertura",
+                [empresaId]
+            );
+
+
+        const periodo = await pool.query(
+            `
+            SELECT
+                COALESCE(SUM(
+                    EXTRACT(EPOCH FROM (
+                        COALESCE(data_resolucao, data_cancelamento, NOW()) - data_abertura
+                    )) / 3600.0
+                ), 0) AS horas
+            FROM ordens_servico
+            WHERE empresa_id = $1
+              AND maquina_parada = true
+              ${filtro.where}
+            `,
+            filtro.valores
+        );
+
+
+        return {
+            paradasAgora: agora.rows[0].total,
+            horasParadas: Number(periodo.rows[0].horas),
+        };
+
+
+    }
+
+
 }
