@@ -1169,14 +1169,11 @@ async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
 
     // "Máquina parada" (v1 enxuto): duração nunca é guardada, sempre calculada
     // na consulta — da abertura até resolução/cancelamento, ou até agora se
-    // ainda aberta. "paradas agora" não usa o filtro de período (é sempre o
-    // estado atual); "horasParadas" usa o mesmo filtro de data_abertura que
-    // o resto do dashboard, pra ficar consistente com os outros cards.
-    async obterResumoParadas(
-        dataInicio?: string,
-        dataFim?: string,
-        empresaId?: string
-    ) {
+    // ainda aberta. É sempre o estado ATUAL, sem filtro de período: um
+    // "X horas paradas no período" somando máquinas diferentes foi testado
+    // e não fez sentido pro gestor (feedback real de uso) — o que importa é
+    // quais máquinas estão paradas agora e há quanto tempo cada uma.
+    async obterResumoParadas(empresaId?: string) {
 
 
         const agora = await pool.query(
@@ -1191,34 +1188,8 @@ async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
         );
 
 
-        const filtro =
-            this.montarFiltroPeriodo(
-                dataInicio,
-                dataFim,
-                "data_abertura",
-                [empresaId]
-            );
-
-
-        const periodo = await pool.query(
-            `
-            SELECT
-                COALESCE(SUM(
-                    EXTRACT(EPOCH FROM (
-                        COALESCE(data_resolucao, data_cancelamento, NOW()) - data_abertura
-                    )) / 3600.0
-                ), 0) AS horas
-            FROM ordens_servico
-            WHERE empresa_id = $1
-              AND maquina_parada = true
-              ${filtro.where}
-            `,
-            filtro.valores
-        );
-
-
         // quais máquinas, pra o gestor não precisar adivinhar — mesmo filtro
-        // de "agora" (sem período), só que trazendo os dados pra exibir
+        // de "agora" acima, só que trazendo os dados pra exibir
         const maquinas = await pool.query(
             `
             SELECT
@@ -1240,7 +1211,6 @@ async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
 
         return {
             paradasAgora: agora.rows[0].total,
-            horasParadas: Number(periodo.rows[0].horas),
             maquinas: maquinas.rows.map((r) => ({
                 osId: r.os_id,
                 maquinaId: r.maquina_id,

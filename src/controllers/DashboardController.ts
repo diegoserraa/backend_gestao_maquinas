@@ -336,12 +336,8 @@ export class DashboardController {
 
         try {
 
-            const { dataInicio, dataFim } = req.query;
-
             const dados =
                 await this.service.obterResumoParadas(
-                    dataInicio as string,
-                    dataFim as string,
                     req.empresaId!
                 );
 
