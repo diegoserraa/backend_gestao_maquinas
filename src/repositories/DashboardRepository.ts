@@ -1217,9 +1217,37 @@ async obterOSFinalizadasOperador(operadorId: number, empresaId: string) {
         );
 
 
+        // quais máquinas, pra o gestor não precisar adivinhar — mesmo filtro
+        // de "agora" (sem período), só que trazendo os dados pra exibir
+        const maquinas = await pool.query(
+            `
+            SELECT
+                os.id AS os_id,
+                os.maquina_id,
+                m.nome AS maquina_nome,
+                os.motivo_parada,
+                os.data_abertura
+            FROM ordens_servico os
+            JOIN maquinas m ON m.id = os.maquina_id
+            WHERE os.empresa_id = $1
+              AND os.maquina_parada = true
+              AND os.status NOT IN ('FINALIZADA', 'CANCELADA')
+            ORDER BY os.data_abertura ASC
+            `,
+            [empresaId]
+        );
+
+
         return {
             paradasAgora: agora.rows[0].total,
             horasParadas: Number(periodo.rows[0].horas),
+            maquinas: maquinas.rows.map((r) => ({
+                osId: r.os_id,
+                maquinaId: r.maquina_id,
+                maquinaNome: r.maquina_nome,
+                motivoParada: r.motivo_parada,
+                dataAbertura: r.data_abertura,
+            })),
         };
 
 
