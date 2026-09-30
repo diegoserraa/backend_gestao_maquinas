@@ -239,6 +239,10 @@ export class MaquinaRepository {
 // Usada pelo cron de manutenção preventiva, que roda sem contexto de
 // requisição — varre TODAS as empresas de propósito (sem filtro), e cada
 // linha retornada já carrega seu próprio empresa_id pra quem chamar usar.
+// "<=" (não "="): pega tudo que venceu até essa data, não só o que vence
+// bem nesse dia — senão uma máquina que passa batido no dia certo (cron
+// fora do ar, ou data cadastrada já no passado) nunca mais ganha O.S.
+// automática. existePreventivaPendente() evita duplicar se já tiver uma aberta.
 async buscarPorDataProximaManutencao(
     data: string
 ){
@@ -247,7 +251,7 @@ async buscarPorDataProximaManutencao(
         `
         SELECT *
         FROM maquinas
-        WHERE proxima_manutencao = $1
+        WHERE proxima_manutencao <= $1
         AND status = 'ativa'
         AND empresa_id IN (SELECT id FROM empresas WHERE ativo)
         `,

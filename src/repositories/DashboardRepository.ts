@@ -432,9 +432,35 @@ async obterPreventivasVencidas(
             (
                 CURRENT_DATE -
                 m.proxima_manutencao
-            )::integer AS dias_atraso
+            )::integer AS dias_atraso,
+
+            os_aberta.id AS os_id
 
         FROM maquinas m
+
+        -- se já existe O.S. de preventiva aberta (ainda não finalizada), traz o id
+        -- dela pra o front linkar direto — mas NÃO tira a máquina da lista: "atrasada"
+        -- é passou da data e não foi FINALIZADA, não "não tem O.S. aberta" (uma O.S.
+        -- em andamento continua sendo uma preventiva atrasada até ser finalizada)
+        LEFT JOIN LATERAL (
+
+            SELECT os.id
+            FROM ordens_servico os
+
+            WHERE
+                os.maquina_id = m.id
+                AND os.tipo_manutencao = 'PREVENTIVA'
+                AND os.status IN (
+                    'ABERTA',
+                    'ATRIBUIDA',
+                    'EM_ANDAMENTO',
+                    'PAUSADA'
+                )
+
+            ORDER BY os.data_abertura DESC
+            LIMIT 1
+
+        ) os_aberta ON true
 
         WHERE
             m.proxima_manutencao IS NOT NULL
@@ -443,23 +469,6 @@ async obterPreventivasVencidas(
             AND m.empresa_id = $1
 
             ${wherePeriodo}
-
-            AND NOT EXISTS (
-
-                SELECT 1
-                FROM ordens_servico os
-
-                WHERE
-                    os.maquina_id = m.id
-                    AND os.tipo_manutencao = 'PREVENTIVA'
-                    AND os.status IN (
-                        'ABERTA',
-                        'ATRIBUIDA',
-                        'EM_ANDAMENTO',
-                        'PAUSADA'
-                    )
-
-            )
 
         ORDER BY
             dias_atraso DESC,
