@@ -151,6 +151,19 @@ export class RelatorioRepository {
 
 
     /* =========================
+       MÁQUINA PARADA
+    ========================= */
+
+    if (filtros.apenasParada) {
+
+      conditions.push(`
+        os.maquina_parada = true
+      `);
+
+    }
+
+
+    /* =========================
        WHERE
     ========================= */
 
@@ -211,7 +224,22 @@ export class RelatorioRepository {
 
           os.valor_parceiro,
 
-          COALESCE(os.tempo_pausado_segundos, 0) AS tempo_pausado_segundos
+          COALESCE(os.tempo_pausado_segundos, 0) AS tempo_pausado_segundos,
+
+          os.maquina_parada,
+
+          os.motivo_parada,
+
+          -- mesma conta de DashboardRepository.obterResumoParadas: da abertura até
+          -- resolução/cancelamento, ou até agora se ainda aberta. Null quando a O.S.
+          -- nunca foi marcada como parada (não é "zero segundos parado", é "não se aplica")
+          CASE
+            WHEN os.maquina_parada THEN
+              EXTRACT(EPOCH FROM (
+                COALESCE(os.data_resolucao, os.data_cancelamento, NOW()) - os.data_abertura
+              ))
+            ELSE NULL
+          END AS tempo_parado_segundos
 
 
         FROM ordens_servico os

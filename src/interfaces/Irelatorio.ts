@@ -6,6 +6,8 @@ export interface FiltrosRelatorioOS {
   maquinaId?: number;
   status?: string;
   tipoManutencao?: string;
+  /** só O.S. marcadas como "máquina parada" na abertura (ver IordemServico) */
+  apenasParada?: boolean;
 }
 
 export interface FiltrosRelatorioMaquina {
@@ -36,6 +38,11 @@ export interface RelatorioOS {
   id_parceiro: number | null;
   valor_parceiro: number | null;
   tempo_pausado_segundos: number | null;
+  // "máquina parada" (v1 enxuto) — respondido só na abertura, duração sempre
+  // calculada na consulta (nunca guardada) — ver DashboardRepository.obterResumoParadas
+  maquina_parada: boolean;
+  motivo_parada: string | null;
+  tempo_parado_segundos: number | null;
 }
 
 export interface RelatorioIndicadorMaquina {

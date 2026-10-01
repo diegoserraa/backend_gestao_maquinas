@@ -21,6 +21,7 @@ export class RelatorioController {
       maquinaId,
       status,
       tipoManutencao,
+      apenasParada,
     } = req.query;
 
     const filtros = {
@@ -52,6 +53,8 @@ export class RelatorioController {
       tipoManutencao: tipoManutencao
         ? String(tipoManutencao)
         : undefined,
+
+      apenasParada: apenasParada === "true",
     };
 
     const arquivo =
@@ -147,6 +150,7 @@ export class RelatorioController {
       maquinaId,
       status,
       tipoManutencao,
+      apenasParada,
     } = req.query;
 
     const filtros = {
@@ -178,6 +182,8 @@ export class RelatorioController {
       tipoManutencao: tipoManutencao
         ? String(tipoManutencao)
         : undefined,
+
+      apenasParada: apenasParada === "true",
     };
 
     const dados =

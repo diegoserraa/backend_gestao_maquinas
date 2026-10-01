@@ -50,7 +50,7 @@ export class RelatorioService {
        TÍTULO
     ========================= */
 
-    worksheet.mergeCells("A1:R1");
+    worksheet.mergeCells("A1:T1");
 
 
     const titulo =
@@ -172,6 +172,16 @@ export class RelatorioService {
         key: "tempo_pausado",
         width: 16,
       },
+
+      {
+        key: "motivo_parada",
+        width: 30,
+      },
+
+      {
+        key: "tempo_parado",
+        width: 16,
+      },
     ];
 
 
@@ -220,6 +230,10 @@ export class RelatorioService {
       "Custo do Parceiro",
 
       "Tempo Pausado",
+
+      "Motivo da Parada",
+
+      "Tempo Parado",
     ];
 
 
@@ -336,6 +350,16 @@ export class RelatorioService {
           tempo_pausado:
             item.tempo_pausado_segundos
               ? this.formatarDuracao(item.tempo_pausado_segundos)
+              : "-",
+
+          motivo_parada:
+            item.maquina_parada
+              ? item.motivo_parada ?? "-"
+              : "-",
+
+          tempo_parado:
+            item.maquina_parada && item.tempo_parado_segundos
+              ? this.formatarDuracao(item.tempo_parado_segundos)
               : "-",
 
         });
