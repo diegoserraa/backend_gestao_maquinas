@@ -273,4 +273,33 @@ describe("job de manutenção preventiva (cron)", () => {
     );
     expect(rows[0].n).toBe(2);
   });
+
+  // bug real encontrado em produção: a varredura usava "proxima_manutencao = hoje"
+  // (igualdade exata) em vez de "<= hoje" — uma máquina que passasse batido no dia
+  // certo (servidor fora do ar, ou já cadastrada com data passada) nunca mais
+  // ganhava O.S. automática, ficando "atrasada" pra sempre. O teste acima
+  // ("cada empresa recebe...") sempre usou a data de HOJE, então não pegava essa
+  // lacuna — passava igual com "=" ou "<=". Este aqui usa uma data BEM passada.
+  it("máquina com data de preventiva BEM passada (não só hoje) também ganha O.S.", async () => {
+    const dezDiasAtras = new Date();
+    dezDiasAtras.setDate(dezDiasAtras.getDate() - 10);
+    const data = dezDiasAtras.toISOString().split("T")[0];
+
+    await pool.query(`UPDATE maquinas SET proxima_manutencao = $1 WHERE id = $2`, [data, fx.A.maquinaId]);
+    // garante que não sobrou nenhuma preventiva aberta de um teste anterior
+    await pool.query(
+      `DELETE FROM ordens_servico WHERE maquina_id = $1 AND tipo_manutencao = 'PREVENTIVA'`,
+      [fx.A.maquinaId]
+    );
+
+    await servico().gerarOrdensPreventivas();
+
+    const { rows } = await pool.query(
+      `SELECT empresa_id, status FROM ordens_servico WHERE maquina_id = $1 AND tipo_manutencao = 'PREVENTIVA'`,
+      [fx.A.maquinaId]
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].empresa_id).toBe(fx.A.empresaId);
+    expect(rows[0].status).toBe("ABERTA");
+  });
 });

@@ -401,25 +401,13 @@ private formatarTempo(segundos: number) {
 
 
 
-async obterPreventivasVencidas(
-    dataInicio?: string,
-    dataFim?: string,
-    empresaId?: string
-) {
-
-    const filtro =
-        this.montarFiltroPeriodo(
-            dataInicio,
-            dataFim,
-            "os.data_abertura",
-            [empresaId]
-        );
-
-    const wherePeriodo =
-        filtro.where.replaceAll(
-            "os.data_abertura",
-            "m.proxima_manutencao"
-        );
+// "Preventiva atrasada" é uma O.S. de preventiva atrasada: parte das O.S.
+// abertas (não das máquinas), então SEMPRE tem uma O.S. de verdade por trás
+// pra o front linkar direto — nada de cair numa máquina sem O.S. Sem filtro
+// de período de propósito: isso é o backlog ATUAL (quem ainda não teve
+// nenhum movimento), não uma métrica histórica (mesmo motivo do card
+// "Máquinas Paradas" não ter período).
+async obterPreventivasVencidas(empresaId?: string) {
 
     const { rows } = await pool.query(
 
@@ -434,47 +422,32 @@ async obterPreventivasVencidas(
                 m.proxima_manutencao
             )::integer AS dias_atraso,
 
-            os_aberta.id AS os_id
+            os.id AS os_id
 
-        FROM maquinas m
-
-        -- se já existe O.S. de preventiva aberta (ainda não finalizada), traz o id
-        -- dela pra o front linkar direto — mas NÃO tira a máquina da lista: "atrasada"
-        -- é passou da data e não foi FINALIZADA, não "não tem O.S. aberta" (uma O.S.
-        -- em andamento continua sendo uma preventiva atrasada até ser finalizada)
-        LEFT JOIN LATERAL (
-
-            SELECT os.id
-            FROM ordens_servico os
-
-            WHERE
-                os.maquina_id = m.id
-                AND os.tipo_manutencao = 'PREVENTIVA'
-                AND os.status IN (
-                    'ABERTA',
-                    'ATRIBUIDA',
-                    'EM_ANDAMENTO',
-                    'PAUSADA'
-                )
-
-            ORDER BY os.data_abertura DESC
-            LIMIT 1
-
-        ) os_aberta ON true
+        FROM ordens_servico os
+        JOIN maquinas m ON m.id = os.maquina_id
 
         WHERE
-            m.proxima_manutencao IS NOT NULL
+            os.tipo_manutencao = 'PREVENTIVA'
+            AND os.status IN (
+                'ABERTA',
+                'ATRIBUIDA',
+                'EM_ANDAMENTO',
+                'PAUSADA'
+            )
+            AND os.empresa_id = $1
 
+            -- defensivo: se alguém abrir uma preventiva manualmente ANTES da
+            -- data vencer, ela não é "atrasada" — não deveria acontecer via
+            -- cron (só cria depois de vencida), mas pode acontecer manual
+            AND m.proxima_manutencao IS NOT NULL
             AND m.proxima_manutencao < CURRENT_DATE
-            AND m.empresa_id = $1
-
-            ${wherePeriodo}
 
         ORDER BY
             dias_atraso DESC,
             m.nome ASC
         `,
-        filtro.valores
+        [empresaId]
     );
 
     return {

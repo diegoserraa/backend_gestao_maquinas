@@ -96,16 +96,9 @@ export class DashboardService {
 
 
 
-    async obterPreventivasVencidas(
-        dataInicio: string | undefined,
-        dataFim: string | undefined,
-        empresaId: string
-    ) {
-
+    async obterPreventivasVencidas(empresaId: string) {
 
         return this.repository.obterPreventivasVencidas(
-            dataInicio,
-            dataFim,
             empresaId
         );
 
