@@ -28,26 +28,6 @@ export function registrarWss(w: WebSocketServer): void {
     wss = w;
 }
 
-/** DIAGNÓSTICO TEMPORÁRIO — remover depois de achar o bug do broadcast parado. */
-let totalChamadasBroadcastEvento = 0;
-let ultimaChamada: { type: string; empresaId: string; quando: string; enviadosPara: number; erro?: string } | null = null;
-
-export function debugInfo() {
-    const base = { totalChamadasBroadcastEvento, ultimaChamada };
-    if (!wss) return { ...base, registrado: false, clientes: [] };
-    const clientes: Array<{ readyState: number; empresaId?: string; monitora?: boolean; usuarioId?: number }> = [];
-    wss.clients.forEach((c) => {
-        const cliente = c as ClienteWS;
-        clientes.push({
-            readyState: cliente.readyState,
-            empresaId: cliente.empresaId?.slice(0, 8),
-            monitora: cliente.monitora,
-            usuarioId: cliente.usuarioId,
-        });
-    });
-    return { ...base, registrado: true, totalClientes: clientes.length, clientes };
-}
-
 function paraCada(fn: (c: ClienteWS) => void): void {
     if (!wss) return;
     wss.clients.forEach((cliente) => {
@@ -61,25 +41,11 @@ function paraCada(fn: (c: ClienteWS) => void): void {
  * que têm permissão de ver o monitoramento.
  */
 export function broadcastEvento(type: string, data: unknown, empresaId: string): void {
-    totalChamadasBroadcastEvento++;
-    let enviadosPara = 0;
-    let erro: string | undefined;
-    try {
-        if (!wss) {
-            erro = "wss nulo";
-        } else {
-            const mensagem = JSON.stringify({ type, data });
-            paraCada((c) => {
-                if (c.empresaId === empresaId && c.monitora) {
-                    c.send(mensagem);
-                    enviadosPara++;
-                }
-            });
-        }
-    } catch (e: any) {
-        erro = e?.message ?? String(e);
-    }
-    ultimaChamada = { type, empresaId, quando: new Date().toISOString(), enviadosPara, erro };
+    if (!wss) return;
+    const mensagem = JSON.stringify({ type, data });
+    paraCada((c) => {
+        if (c.empresaId === empresaId && c.monitora) c.send(mensagem);
+    });
 }
 
 export function broadcastTelemetria(data: unknown, empresaId: string): void {

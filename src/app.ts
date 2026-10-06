@@ -9,8 +9,6 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 import { carregarPerfil } from "./middlewares/permissao";
 import { apiLimiter, loginLimiter } from "./middlewares/rateLimitMiddleware";
 import { logger } from "./config/logger";
-import { debugInfo } from "./realtime/wsBus";
-import { getMqttStatus } from "./mqtt/telemetriaSubscriber";
 
 const app = express();
 
@@ -60,19 +58,6 @@ app.use(
 // antes não existia nenhuma forma de saber "o servidor está de pé?"
 // sem chamar uma rota de negócio.
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
-
-// DIAGNÓSTICO TEMPORÁRIO — inspeciona o estado real do WebSocket no
-// processo rodando (quantos clientes, quem tem "monitora"), pra achar por
-// que o broadcast de telemetria parece não chegar depois do snapshot.
-// Remover assim que o bug for encontrado.
-app.get("/health/ws", (_req, res) => {
-  res.json({
-    ...debugInfo(),
-    mqtt: getMqttStatus(),
-    agora: new Date().toISOString(),
-    pid: process.pid,
-  });
-});
 
 // limite geral pra API inteira, antes de qualquer rota
 app.use(apiLimiter);
