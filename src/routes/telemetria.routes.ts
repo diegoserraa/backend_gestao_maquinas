@@ -15,5 +15,6 @@ telemetriaRoutes.get("/", telemetriaController.listar);
 telemetriaRoutes.get("/status", telemetriaController.status);
 telemetriaRoutes.get("/:maquinaId", telemetriaController.buscarPorMaquina);
 telemetriaRoutes.get("/:maquinaId/historico", telemetriaController.historico);
+telemetriaRoutes.get("/:maquinaId/historico-agregado", telemetriaController.historicoAgregado);
 
 export { telemetriaRoutes };

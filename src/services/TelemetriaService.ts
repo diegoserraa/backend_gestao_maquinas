@@ -1,6 +1,9 @@
 import {
+    FaixaHistorico,
+    IPontoAgregado,
     ITelemetriaAtualComMaquina,
     ITelemetriaLeitura,
+    MetricaHistorico,
 } from "../interfaces/Itelemetria";
 import { TelemetriaRepository } from "../repositories/TelemetriaRepository";
 import { MonitoramentoService } from "./MonitoramentoService";
@@ -115,6 +118,20 @@ export class TelemetriaService {
             maquinaId,
             desde,
             limiteSeguro,
+            empresaId
+        );
+    }
+
+    listarHistoricoAgregado(
+        maquinaId: number,
+        faixa: FaixaHistorico,
+        metrica: MetricaHistorico,
+        empresaId: string
+    ): Promise<IPontoAgregado[]> {
+        return this.repository.listarHistoricoAgregado(
+            maquinaId,
+            faixa,
+            metrica,
             empresaId
         );
     }

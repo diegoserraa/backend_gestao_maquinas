@@ -1,8 +1,39 @@
 import { pool } from "../database/connection";
 import {
+    FaixaHistorico,
+    IPontoAgregado,
     ITelemetriaAtualComMaquina,
     ITelemetriaLeitura,
+    MetricaHistorico,
 } from "../interfaces/Itelemetria";
+
+// configuração de cada "balde" de tempo do histórico agregado — espelha
+// FAIXA_CFG em front-maquinas/.../monitoramentoService.ts (mesma faixa,
+// mesma quantidade de pontos), só que quem agora faz o agrupamento de
+// verdade é o Postgres (date_trunc + generate_series), não mais um mock.
+const TZ_PADRAO = "America/Sao_Paulo";
+
+const BUCKET_CFG: Record<
+    FaixaHistorico,
+    { pontos: number; passo: string; truncUnidade: string | null }
+> = {
+    // truncUnidade = null -> caso especial "6 horas" (ver montarFim abaixo),
+    // sem equivalente direto em date_trunc
+    "1h": { pontos: 24, passo: "1 hour", truncUnidade: "hour" },
+    "6h": { pontos: 8, passo: "6 hours", truncUnidade: null },
+    "24h": { pontos: 14, passo: "1 day", truncUnidade: "day" },
+    "7d": { pontos: 10, passo: "1 week", truncUnidade: "week" },
+    "30d": { pontos: 12, passo: "1 month", truncUnidade: "month" },
+};
+
+// colunas numéricas válidas de telemetria_leituras — nunca vem direto da
+// query string sem passar por esta checagem (evita montar SQL com nome de
+// coluna arbitrário)
+const COLUNA_METRICA: Record<MetricaHistorico, string> = {
+    temperatura: "temperatura",
+    vibracao: "vibracao",
+    horas_ligadas: "horas_ligadas",
+};
 
 // SELECT compartilhado: máquina + última telemetria + limites configurados.
 const SELECT_ATUAL = `
@@ -139,6 +170,77 @@ export class TelemetriaRepository {
             vibracao: r.vibracao === null ? null : Number(r.vibracao),
             horas_ligadas:
                 r.horas_ligadas === null ? null : Number(r.horas_ligadas),
+        }));
+    }
+
+    /**
+     * Histórico agregado por balde de tempo (date_trunc + AVG/MIN/MAX),
+     * pro gráfico principal de monitoramento. Sempre devolve `pontos`
+     * baldes consecutivos terminando no balde atual (alinhados ao
+     * calendário de America/Sao_Paulo), mesmo quando não há leitura
+     * nenhuma em algum deles (vem com media/minimo/maximo = null).
+     *
+     * horas_ligadas é um contador crescente (não uma métrica que oscila),
+     * então usa MAX em vez de AVG/MIN — representa "valor do horímetro
+     * no fim daquele balde", sem banda de mín/máx.
+     */
+    async listarHistoricoAgregado(
+        maquinaId: number,
+        faixa: FaixaHistorico,
+        metrica: MetricaHistorico,
+        empresaId: string
+    ): Promise<IPontoAgregado[]> {
+        const cfg = BUCKET_CFG[faixa];
+        const coluna = COLUNA_METRICA[metrica];
+        const isHorimetro = metrica === "horas_ligadas";
+        const aggMedia = isHorimetro ? "MAX" : "AVG";
+        const aggMin = isHorimetro ? "MAX" : "MIN";
+        const aggMax = isHorimetro ? "MAX" : "MAX";
+
+        // "fim" = início do balde mais recente que já fechou (ou está em
+        // andamento) — p.ex. faixa "24h" (1 balde = 1 dia) com agora =
+        // 14:32 -> fim = meia-noite de hoje, no fuso de TZ_PADRAO.
+        const fimExpr = cfg.truncUnidade
+            ? `date_trunc('${cfg.truncUnidade}', now() AT TIME ZONE $3) AT TIME ZONE $3`
+            : // caso especial "6 horas": trunca o dia e desce pro múltiplo de 6h
+              `(date_trunc('day', now() AT TIME ZONE $3)
+                  + floor(extract(hour from now() AT TIME ZONE $3) / 6) * interval '6 hours'
+               ) AT TIME ZONE $3`;
+
+        const { rows } = await pool.query(
+            `
+            WITH limites AS (
+                SELECT ${fimExpr} AS fim
+            ),
+            serie AS (
+                SELECT generate_series(
+                    (SELECT fim FROM limites) - ($4::interval * ($5::int - 1)),
+                    (SELECT fim FROM limites),
+                    $4::interval
+                ) AS bucket_start
+            )
+            SELECT
+                s.bucket_start                  AS instante,
+                ${aggMedia}(t.${coluna})         AS media,
+                ${aggMin}(t.${coluna})           AS minimo,
+                ${aggMax}(t.${coluna})           AS maximo
+            FROM serie s
+            LEFT JOIN telemetria_leituras t
+                ON t.maquina_id = $1
+               AND t.empresa_id = $2
+               AND t.recebido_em >= s.bucket_start
+               AND t.recebido_em < s.bucket_start + $4::interval
+            GROUP BY s.bucket_start
+            ORDER BY s.bucket_start
+            `,
+            [maquinaId, empresaId, TZ_PADRAO, cfg.passo, cfg.pontos]
+        );
+
+        return rows.map((r) => ({
+            instante: r.instante,
+            media: r.media === null ? null : Number(r.media),
+            minimo: r.minimo === null ? null : Number(r.minimo),
+            maximo: r.maximo === null ? null : Number(r.maximo),
         }));
     }
 

@@ -1,6 +1,14 @@
 import { Request, Response } from "express";
 import { TelemetriaService } from "../services/TelemetriaService";
 import { getMqttStatus } from "../mqtt/telemetriaSubscriber";
+import { FaixaHistorico, MetricaHistorico } from "../interfaces/Itelemetria";
+
+const FAIXAS_VALIDAS: FaixaHistorico[] = ["1h", "6h", "24h", "7d", "30d"];
+const METRICAS_VALIDAS: MetricaHistorico[] = [
+    "temperatura",
+    "vibracao",
+    "horas_ligadas",
+];
 
 export class TelemetriaController {
 
@@ -77,6 +85,44 @@ export class TelemetriaController {
         } catch (error: any) {
             return res.status(500).json({
                 message: error.message || "Erro ao buscar histórico",
+            });
+        }
+    };
+
+    // GET /telemetria/:maquinaId/historico-agregado?faixa=1h&metrica=temperatura
+    historicoAgregado = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.maquinaId);
+
+            if (!Number.isInteger(maquinaId) || maquinaId <= 0) {
+                return res.status(400).json({ message: "maquinaId inválido" });
+            }
+
+            const { faixa, metrica } = req.query;
+
+            if (!FAIXAS_VALIDAS.includes(faixa as FaixaHistorico)) {
+                return res.status(400).json({
+                    message: `faixa inválida (use: ${FAIXAS_VALIDAS.join(", ")})`,
+                });
+            }
+
+            if (!METRICAS_VALIDAS.includes(metrica as MetricaHistorico)) {
+                return res.status(400).json({
+                    message: `metrica inválida (use: ${METRICAS_VALIDAS.join(", ")})`,
+                });
+            }
+
+            const dados = await this.service.listarHistoricoAgregado(
+                maquinaId,
+                faixa as FaixaHistorico,
+                metrica as MetricaHistorico,
+                req.empresaId!
+            );
+
+            return res.json(dados);
+        } catch (error: any) {
+            return res.status(500).json({
+                message: error.message || "Erro ao buscar histórico agregado",
             });
         }
     };

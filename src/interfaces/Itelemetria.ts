@@ -41,3 +41,19 @@ export interface ITelemetriaAtualComMaquina {
     // limites configurados por métrica (maquina_parametros)
     limites: Record<string, ILimiteMetrica>;
 }
+
+export type FaixaHistorico = "1h" | "6h" | "24h" | "7d" | "30d";
+
+export type MetricaHistorico = "temperatura" | "vibracao" | "horas_ligadas";
+
+/**
+ * Ponto já agregado por "balde" de tempo (date_trunc + AVG/MIN/MAX no banco).
+ * Mesmo shape que o front já espera em PontoAgregado — não mudar sem
+ * atualizar front-maquinas/src/modules/monitoramento/monitoramentoTypes.ts.
+ */
+export interface IPontoAgregado {
+    instante: Date; // início do balde
+    media: number | null;
+    minimo: number | null;
+    maximo: number | null;
+}
