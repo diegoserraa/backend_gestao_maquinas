@@ -28,6 +28,22 @@ export function registrarWss(w: WebSocketServer): void {
     wss = w;
 }
 
+/** DIAGNÓSTICO TEMPORÁRIO — remover depois de achar o bug do broadcast parado. */
+export function debugInfo() {
+    if (!wss) return { registrado: false, clientes: [] };
+    const clientes: Array<{ readyState: number; empresaId?: string; monitora?: boolean; usuarioId?: number }> = [];
+    wss.clients.forEach((c) => {
+        const cliente = c as ClienteWS;
+        clientes.push({
+            readyState: cliente.readyState,
+            empresaId: cliente.empresaId?.slice(0, 8),
+            monitora: cliente.monitora,
+            usuarioId: cliente.usuarioId,
+        });
+    });
+    return { registrado: true, totalClientes: clientes.length, clientes };
+}
+
 function paraCada(fn: (c: ClienteWS) => void): void {
     if (!wss) return;
     wss.clients.forEach((cliente) => {
