@@ -10,6 +10,7 @@ import { carregarPerfil } from "./middlewares/permissao";
 import { apiLimiter, loginLimiter } from "./middlewares/rateLimitMiddleware";
 import { logger } from "./config/logger";
 import { debugInfo } from "./realtime/wsBus";
+import { getMqttStatus } from "./mqtt/telemetriaSubscriber";
 
 const app = express();
 
@@ -65,7 +66,12 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 // que o broadcast de telemetria parece não chegar depois do snapshot.
 // Remover assim que o bug for encontrado.
 app.get("/health/ws", (_req, res) => {
-  res.json({ ...debugInfo(), agora: new Date().toISOString(), pid: process.pid });
+  res.json({
+    ...debugInfo(),
+    mqtt: getMqttStatus(),
+    agora: new Date().toISOString(),
+    pid: process.pid,
+  });
 });
 
 // limite geral pra API inteira, antes de qualquer rota
