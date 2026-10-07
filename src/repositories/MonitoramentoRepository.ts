@@ -92,17 +92,32 @@ export class MonitoramentoRepository {
     /* ---------------- ALERTAS ---------------- */
 
     // idem: empresa_id vem da máquina, não de parâmetro externo.
+    //
+    // ON CONFLICT DO NOTHING contra o índice único parcial (maquina_id,
+    // chave) WHERE status='aberto': se duas avaliações correrem em
+    // paralelo (duas leituras quase juntas, ou até dois processos durante
+    // um redeploy) e ambas tentarem confirmar o mesmo alerta, só a
+    // primeira grava — a segunda cai no fallback abaixo e reaproveita o
+    // alerta que já ficou aberto, em vez de duplicar a linha.
     async criarAlerta(a: ITelemetriaAlerta): Promise<ITelemetriaAlerta> {
         const { rows } = await pool.query(
             `
             INSERT INTO telemetria_alertas
                 (maquina_id, chave, nivel, valor, limite, status, detalhe, empresa_id)
             VALUES ($1,$2,$3,$4,$5,'aberto',$6, (SELECT empresa_id FROM maquinas WHERE id = $1))
+            ON CONFLICT (maquina_id, chave) WHERE status = 'aberto' DO NOTHING
             RETURNING *
             `,
             [a.maquina_id, a.chave, a.nivel, a.valor, a.limite, a.detalhe]
         );
-        return this.mapAlerta(rows[0]);
+
+        if (rows[0]) return this.mapAlerta(rows[0]);
+
+        const existente = await pool.query(
+            `SELECT * FROM telemetria_alertas WHERE maquina_id = $1 AND chave = $2 AND status = 'aberto'`,
+            [a.maquina_id, a.chave]
+        );
+        return this.mapAlerta(existente.rows[0]);
     }
 
     async atualizarNivelAlerta(id: number, nivel: NivelAlerta, valor: number | null): Promise<void> {
