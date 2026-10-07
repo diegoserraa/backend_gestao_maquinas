@@ -28,4 +28,7 @@ maquinaRoutes.patch("/:id/status", exigir("maquinas.alterar_status"), maquinaCon
 // O.S. da máquina: devolve só as que o usuário pode ver (o controller aplica o escopo)
 maquinaRoutes.get("/:id/os", exigir("maquinas.ver"), maquinaController.listarOsPorMaquina);
 
+// PIN de 6 dígitos pra vincular um ESP32 novo a esta máquina (digita na telinha dele)
+maquinaRoutes.post("/:id/pareamento", exigir("maquinas.editar"), maquinaController.gerarPareamento);
+
 export { maquinaRoutes };

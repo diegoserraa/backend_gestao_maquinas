@@ -60,6 +60,21 @@ export function limitadorDeTrocaDeSenha(limite = Number(process.env.TROCA_SENHA_
 }
 
 /**
+ * Resgate do PIN de pareamento (endpoint público, sem token — a placa não
+ * tem login): 6 dígitos dá 1 milhão de combinações, mas sem limite alguém
+ * poderia tentar adivinhar um PIN alheio ainda ativo por força bruta.
+ * 20 tentativas a cada 10 min por IP é generoso pro uso real (digitar
+ * errado na telinha algumas vezes) e apertado pra adivinhação.
+ */
+export const pareamentoLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: logBloqueio("pareamento"),
+});
+
+/**
  * Limite para AÇÕES do painel do administrador que criam coisas (empresas): mesmo com o token certo,
  * um token vazado não pode sair cadastrando empresas em massa. Conta por usuário (não por IP).
  * No teste automatizado o limite geral é ignorado, mas este vale (a menos que se peça o contrário).

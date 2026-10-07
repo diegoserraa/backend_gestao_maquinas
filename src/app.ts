@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import { router } from "./routes";
 import { authRoutes } from "./routes/auth.routes";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { dispositivoRoutes } from "./routes/dispositivo.routes";
 import { carregarPerfil } from "./middlewares/permissao";
 import { apiLimiter, loginLimiter } from "./middlewares/rateLimitMiddleware";
 import { logger } from "./config/logger";
@@ -62,9 +63,11 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 // limite geral pra API inteira, antes de qualquer rota
 app.use(apiLimiter);
 
-// única rota pública: login. Tudo abaixo exige token válido.
-// limite mais estrito aqui — é o único endpoint onde força bruta faz sentido.
+// rotas públicas (sem token): login, e o resgate de pareamento que o
+// próprio ESP32 chama antes de saber qualquer coisa do sistema. Tudo
+// abaixo de authMiddleware exige token válido.
 app.use("/auth", loginLimiter, authRoutes);
+app.use("/dispositivos", dispositivoRoutes);
 
 app.use(authMiddleware);
 

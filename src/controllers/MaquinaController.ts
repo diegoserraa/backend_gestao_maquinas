@@ -2,10 +2,25 @@ import { Request, Response } from "express";
 import { lerPagina, responderPagina } from "../utils/paginacao";
 import { escopoOS } from "../middlewares/permissao";
 import { MaquinaService } from "../services/MaquinaService";
+import { PareamentoService } from "../services/PareamentoService";
 
 export class MaquinaController {
 
     private service = new MaquinaService();
+    private pareamentoService = new PareamentoService();
+
+    /** Gera o PIN de 6 dígitos pra digitar na telinha do ESP32 e vincular essa máquina. */
+    gerarPareamento = async (req: Request, res: Response) => {
+        try {
+            const id = Number(req.params.id);
+            const resultado = await this.pareamentoService.gerar(id, req.empresaId!);
+            return res.status(201).json(resultado);
+        } catch (error: any) {
+            return res.status(400).json({
+                message: error.message || "Erro ao gerar código de pareamento",
+            });
+        }
+    };
 
     listar = async (
         req: Request,
