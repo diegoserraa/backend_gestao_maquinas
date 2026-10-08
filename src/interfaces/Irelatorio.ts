@@ -45,6 +45,25 @@ export interface RelatorioOS {
   tempo_parado_segundos: number | null;
 }
 
+export interface FiltrosRelatorioTecnico {
+  empresaId: string;
+  dataInicial?: string;
+  dataFinal?: string;
+}
+
+export interface RelatorioProdutividadeTecnico {
+  tecnico_id: number;
+  tecnico_nome: string;
+
+  // no período filtrado
+  os_finalizadas: number;
+  os_finalizadas_prioritarias: number; // prioridade ALTA ou CRITICA
+  tempo_medio_atendimento_segundos: number | null; // início -> resolução, descontando pausa
+
+  // estado ATUAL (independe do período — é a fila de hoje)
+  os_em_aberto: number;
+}
+
 export interface RelatorioIndicadorMaquina {
   maquina_id: number;
   maquina_nome: string;

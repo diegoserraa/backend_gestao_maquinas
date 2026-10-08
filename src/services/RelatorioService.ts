@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import {
   FiltrosRelatorioOS,
   FiltrosRelatorioMaquina,
+  FiltrosRelatorioTecnico,
 } from "../interfaces/Irelatorio";
 
 import {
@@ -860,6 +861,89 @@ export class RelatorioService {
       filtros
     );
 
+  }
+
+
+  /* =====================================================
+     PREVIEW PRODUTIVIDADE POR TÉCNICO
+  ===================================================== */
+
+  async previewProdutividadeTecnico(
+    filtros: FiltrosRelatorioTecnico
+  ) {
+
+    return this.repository.produtividadePorTecnico(
+      filtros
+    );
+
+  }
+
+
+  /* =====================================================
+     EXPORTAR PRODUTIVIDADE POR TÉCNICO
+  ===================================================== */
+
+  async ExportarProdutividadeTecnico(
+    filtros: FiltrosRelatorioTecnico
+  ): Promise<ExcelJS.Buffer> {
+
+    const dados =
+      await this.repository.produtividadePorTecnico(
+        filtros
+      );
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Sistema de Manutenção";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Produtividade");
+
+    worksheet.mergeCells("A1:F1");
+    const titulo = worksheet.getCell("A1");
+    titulo.value = "Produtividade por Técnico";
+    titulo.font = { bold: true, size: 16 };
+    titulo.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(1).height = 28;
+
+    worksheet.columns = [
+      { key: "tecnico_nome", width: 28 },
+      { key: "os_em_aberto", width: 16 },
+      { key: "os_finalizadas", width: 18 },
+      { key: "os_finalizadas_prioritarias", width: 24 },
+      { key: "tempo_medio_atendimento", width: 28 },
+    ];
+
+    const headerRow = worksheet.getRow(2);
+    headerRow.values = [
+      "Técnico",
+      "OS em Aberto (agora)",
+      "OS Finalizadas no Período",
+      "Finalizadas de Alta Prioridade",
+      "Tempo Médio de Atendimento",
+    ];
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    headerRow.height = 42;
+
+    dados.forEach((item) => {
+      const row = worksheet.addRow({
+        tecnico_nome: item.tecnico_nome,
+        os_em_aberto: Number(item.os_em_aberto),
+        os_finalizadas: Number(item.os_finalizadas),
+        os_finalizadas_prioritarias: Number(item.os_finalizadas_prioritarias),
+        tempo_medio_atendimento:
+          item.tempo_medio_atendimento_segundos !== null
+            ? this.formatarDuracao(Number(item.tempo_medio_atendimento_segundos))
+            : "-",
+      });
+
+      row.alignment = { vertical: "middle" };
+    });
+
+    worksheet.autoFilter = { from: "A2", to: "E2" };
+    worksheet.views = [{ state: "frozen", ySplit: 2 }];
+
+    return workbook.xlsx.writeBuffer();
   }
 
   // "45s", "12min", "1h 05min", "2d 3h" (mesmo formato das telas)

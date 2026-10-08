@@ -135,6 +135,59 @@ export class RelatorioController {
 
 
   /* =====================================================
+     PRODUTIVIDADE POR TÉCNICO
+  ===================================================== */
+
+  ExportarProdutividadeTecnico = async (
+    req: Request,
+    res: Response
+  ) => {
+
+    const { dataInicial, dataFinal } = req.query;
+
+    const filtros = {
+      empresaId: req.empresaId!,
+      dataInicial: dataInicial ? String(dataInicial) : undefined,
+      dataFinal: dataFinal ? String(dataFinal) : undefined,
+    };
+
+    const arquivo =
+      await this.service.ExportarProdutividadeTecnico(filtros);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="produtividade-por-tecnico.xlsx"'
+    );
+
+    return res.send(arquivo);
+  };
+
+  previewProdutividadeTecnico = async (
+    req: Request,
+    res: Response
+  ) => {
+
+    const { dataInicial, dataFinal } = req.query;
+
+    const filtros = {
+      empresaId: req.empresaId!,
+      dataInicial: dataInicial ? String(dataInicial) : undefined,
+      dataFinal: dataFinal ? String(dataFinal) : undefined,
+    };
+
+    const dados =
+      await this.service.previewProdutividadeTecnico(filtros);
+
+    return res.json(dados);
+  };
+
+
+  /* =====================================================
      PREVIEW - HISTÓRICO DE OS
   ===================================================== */
 

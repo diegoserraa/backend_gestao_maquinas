@@ -18,4 +18,10 @@ relatorioRoutes.get("/ordens-servico/preview", exigir("relatorios.ver"), relator
 relatorioRoutes.get("/manutencao", exigir("relatorios.exportar"), relatorioController.ExportarIndicadoresMaquinas);
 relatorioRoutes.get("/manutencao/preview", exigir("relatorios.ver"), relatorioController.previewIndicadoresMaquinas);
 
+/* =========================
+   PRODUTIVIDADE POR TÉCNICO
+========================= */
+relatorioRoutes.get("/tecnicos", exigir("relatorios.exportar"), relatorioController.ExportarProdutividadeTecnico);
+relatorioRoutes.get("/tecnicos/preview", exigir("relatorios.ver"), relatorioController.previewProdutividadeTecnico);
+
 export { relatorioRoutes };

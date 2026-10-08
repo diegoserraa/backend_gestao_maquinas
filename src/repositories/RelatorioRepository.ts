@@ -3,8 +3,10 @@ import { pool } from "../database/connection";
 import {
   FiltrosRelatorioOS,
   FiltrosRelatorioMaquina,
+  FiltrosRelatorioTecnico,
   RelatorioOS,
   RelatorioIndicadorMaquina,
+  RelatorioProdutividadeTecnico,
 } from "../interfaces/Irelatorio";
 
 
@@ -767,6 +769,128 @@ export class RelatorioRepository {
 
     return rows;
 
+  }
+
+
+  /* =====================================================
+     RELATÓRIO 3
+     PRODUTIVIDADE POR TÉCNICO
+
+     Uma linha por técnico ATIVO da empresa (aparece mesmo com 0 OS no
+     período, igual Indicadores por Máquina) — duas famílias de números:
+       - "no período" (respeita dataInicial/dataFinal): finalizadas,
+         tempo médio de atendimento (descontando pausa, mesma conta do
+         MTTR de Indicadores);
+       - "agora" (NUNCA filtrado por período — é a fila de hoje):
+         os_em_aberto, pra mostrar carga de trabalho atual, não só
+         histórico.
+  ===================================================== */
+
+  async produtividadePorTecnico(
+    filtros: FiltrosRelatorioTecnico
+  ): Promise<RelatorioProdutividadeTecnico[]> {
+
+    const params: any[] = [filtros.empresaId];
+
+    const condicoesPeriodo: string[] = [
+      `os.empresa_id = $1`,
+      `os.id_tecnico IS NOT NULL`,
+    ];
+
+    let paramIndex = 2;
+
+    if (filtros.dataInicial) {
+      condicoesPeriodo.push(`os.data_abertura >= $${paramIndex}::date`);
+      params.push(filtros.dataInicial);
+      paramIndex++;
+    }
+
+    if (filtros.dataFinal) {
+      condicoesPeriodo.push(`os.data_abertura < ($${paramIndex}::date + INTERVAL '1 day')`);
+      params.push(filtros.dataFinal);
+      paramIndex++;
+    }
+
+    const wherePeriodo = `WHERE ${condicoesPeriodo.join(" AND ")}`;
+
+    const { rows } = await pool.query(
+      `
+      WITH metrica_periodo AS (
+
+        SELECT
+
+          os.id_tecnico,
+
+          COUNT(*) FILTER (
+            WHERE os.status = 'FINALIZADA'
+          ) AS os_finalizadas,
+
+          COUNT(*) FILTER (
+            WHERE os.status = 'FINALIZADA'
+              AND os.prioridade IN ('ALTA', 'CRITICA')
+          ) AS os_finalizadas_prioritarias,
+
+          AVG(
+            EXTRACT(EPOCH FROM (os.data_resolucao - os.data_inicio_atendimento))
+            - COALESCE(os.tempo_pausado_segundos, 0)
+          ) FILTER (
+            WHERE os.status = 'FINALIZADA'
+              AND os.data_inicio_atendimento IS NOT NULL
+              AND os.data_resolucao IS NOT NULL
+          ) AS tempo_medio_atendimento_segundos
+
+        FROM ordens_servico os
+
+        ${wherePeriodo}
+
+        GROUP BY os.id_tecnico
+
+      ),
+
+      carga_atual AS (
+
+        SELECT
+
+          os.id_tecnico,
+
+          COUNT(*) AS os_em_aberto
+
+        FROM ordens_servico os
+
+        WHERE os.empresa_id = $1
+          AND os.id_tecnico IS NOT NULL
+          AND os.status IN ('ATRIBUIDA', 'EM_ANDAMENTO', 'PAUSADA')
+
+        GROUP BY os.id_tecnico
+
+      )
+
+      SELECT
+
+        u.id AS tecnico_id,
+        u.nome AS tecnico_nome,
+
+        COALESCE(mp.os_finalizadas, 0) AS os_finalizadas,
+        COALESCE(mp.os_finalizadas_prioritarias, 0) AS os_finalizadas_prioritarias,
+        mp.tempo_medio_atendimento_segundos,
+
+        COALESCE(ca.os_em_aberto, 0) AS os_em_aberto
+
+      FROM usuarios u
+
+      LEFT JOIN metrica_periodo mp ON mp.id_tecnico = u.id
+      LEFT JOIN carga_atual ca ON ca.id_tecnico = u.id
+
+      WHERE u.empresa_id = $1
+        AND u.role = 'TECNICO'
+        AND u.ativo = true
+
+      ORDER BY os_em_aberto DESC, u.nome ASC
+      `,
+      params
+    );
+
+    return rows;
   }
 
 }
