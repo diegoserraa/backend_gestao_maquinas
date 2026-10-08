@@ -2,10 +2,11 @@ import { pool } from "../database/connection";
 import { IOrdemServico, IPausaOS } from "../interfaces/IordemServico";
 import { Pagina } from "../utils/paginacao";
 
-// Segundos da pausa em curso, medidos pelo banco (a pausa é gravada com o relógio UTC em coluna "timestamp
-// sem fuso"; calcular isso no navegador dependeria do fuso). O front só soma o que passa depois de receber.
+// Segundos da pausa em curso, medidos pelo banco (pausada_em é timestamptz,
+// então a subtração já é correta sem nenhum ajuste de fuso). O front só
+// soma o que passa depois de receber.
 const PAUSA_ATUAL = `CASE WHEN pausada_em IS NULL THEN 0
-       ELSE GREATEST(0, EXTRACT(EPOCH FROM ((NOW() AT TIME ZONE 'UTC') - pausada_em)))::int END AS pausa_atual_segundos`;
+       ELSE GREATEST(0, EXTRACT(EPOCH FROM (NOW() - pausada_em)))::int END AS pausa_atual_segundos`;
 
 // Nome de quem abriu a O.S. (só de usuário da mesma empresa) — a tela mostra o nome, não o id
 const SOLICITANTE = `(SELECT u.nome FROM usuarios u
@@ -133,11 +134,10 @@ export class OrdemServicoRepository {
     );
   }
 
-  // Segundos da pausa em curso, medidos pelo próprio banco. A pausa é gravada com o relógio UTC em coluna
-  // "timestamp sem fuso"; ler isso em JS o interpretaria como horário local e a conta sairia errada.
+  // Segundos da pausa em curso, medidos pelo próprio banco (pausada_em é timestamptz).
   async segundosDaPausaEmCurso(osId: number, empresaId: string): Promise<number> {
     const { rows } = await pool.query(
-      `SELECT COALESCE(GREATEST(0, EXTRACT(EPOCH FROM ((NOW() AT TIME ZONE 'UTC') - pausada_em)))::int, 0) AS segundos
+      `SELECT COALESCE(GREATEST(0, EXTRACT(EPOCH FROM (NOW() - pausada_em)))::int, 0) AS segundos
          FROM ordens_servico
         WHERE id = $1 AND empresa_id = $2`,
       [osId, empresaId]
