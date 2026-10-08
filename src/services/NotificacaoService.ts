@@ -12,10 +12,20 @@ export class NotificacaoService {
         new NotificacaoRepository();
 
     /**
-     * Empurra o evento para as abas/aparelhos do dono da notificação. Roda em SEGUNDO PLANO: quem
-     * criou/leu a notificação não espera a contagem nem o envio (abrir uma O.S. notifica a empresa
-     * toda, e cada espera a mais somaria na resposta). Nunca derruba a operação principal: se o tempo
-     * real falhar, a notificação continua gravada (e aparece ao recarregar).
+     * Empurra o evento para as abas/aparelhos do dono da notificação.
+     *
+     * SEMPRE aguardado pelo chamador (nunca "void"): a contagem de não lidas
+     * é calculada AQUI DENTRO, então se duas chamadas (ex.: marcar uma como
+     * lida e, em seguida, marcar todas) não respeitarem essa ordem, a
+     * contagem de uma pode ler o estado já alterado pela outra e mandar um
+     * número errado pro cliente — foi exatamente o bug achado (teste
+     * "sincroniza as outras abas com o contador certo" falhava de forma
+     * intermitente). O envio em si (enviarParaUsuario) já é síncrono/não-
+     * bloqueante por natureza; o único custo de aguardar aqui é a consulta
+     * de contagem, rápida (índice), e vale a correção.
+     *
+     * Nunca derruba a operação principal: se o tempo real falhar, a
+     * notificação continua gravada (e aparece ao recarregar).
      */
     private async emitir(
         usuarioId: number,
@@ -39,7 +49,7 @@ export class NotificacaoService {
         const criada = await this.repository.criar(notificacao) as INotificacao & { empresa_id?: string };
 
         // em tempo real: o sino do destinatário atualiza na hora (sem esperar o próximo "polling")
-        void this.emitir(criada.usuario_id, criada.empresa_id, "notificacao", (naoLidas) => ({
+        await this.emitir(criada.usuario_id, criada.empresa_id, "notificacao", (naoLidas) => ({
             notificacao: criada,
             nao_lidas: naoLidas,
         }));
@@ -74,7 +84,7 @@ export class NotificacaoService {
     ) {
         await this.repository.marcarComoLida(id, usuarioId);
         // outras abas/aparelhos do mesmo usuário acompanham
-        void this.emitir(usuarioId, empresaId, "notificacao_sync", (n) => ({ acao: "lida", id, nao_lidas: n }));
+        await this.emitir(usuarioId, empresaId, "notificacao_sync", (n) => ({ acao: "lida", id, nao_lidas: n }));
     }
 
     async marcarTodasComoLidas(
@@ -82,7 +92,7 @@ export class NotificacaoService {
         empresaId?: string
     ) {
         await this.repository.marcarTodasComoLidas(usuario_id);
-        void this.emitir(usuario_id, empresaId, "notificacao_sync", (n) => ({ acao: "todas_lidas", nao_lidas: n }));
+        await this.emitir(usuario_id, empresaId, "notificacao_sync", (n) => ({ acao: "todas_lidas", nao_lidas: n }));
     }
 
     async excluir(
@@ -91,7 +101,7 @@ export class NotificacaoService {
         empresaId?: string
     ) {
         await this.repository.excluir(id, usuarioId);
-        void this.emitir(usuarioId, empresaId, "notificacao_sync", (n) => ({ acao: "excluida", id, nao_lidas: n }));
+        await this.emitir(usuarioId, empresaId, "notificacao_sync", (n) => ({ acao: "excluida", id, nao_lidas: n }));
     }
 
 }
