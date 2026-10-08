@@ -4,6 +4,7 @@ import {
   FiltrosRelatorioOS,
   FiltrosRelatorioMaquina,
   FiltrosRelatorioTecnico,
+  FiltrosRelatorioAlerta,
 } from "../interfaces/Irelatorio";
 
 import {
@@ -941,6 +942,113 @@ export class RelatorioService {
     });
 
     worksheet.autoFilter = { from: "A2", to: "E2" };
+    worksheet.views = [{ state: "frozen", ySplit: 2 }];
+
+    return workbook.xlsx.writeBuffer();
+  }
+
+
+  /* =====================================================
+     PREVIEW ALERTAS DE MONITORAMENTO
+  ===================================================== */
+
+  async previewAlertasMonitoramento(
+    filtros: FiltrosRelatorioAlerta
+  ) {
+
+    return this.repository.alertasDeMonitoramento(
+      filtros
+    );
+
+  }
+
+
+  /* =====================================================
+     EXPORTAR ALERTAS DE MONITORAMENTO
+  ===================================================== */
+
+  async ExportarAlertasMonitoramento(
+    filtros: FiltrosRelatorioAlerta
+  ): Promise<ExcelJS.Buffer> {
+
+    const dados =
+      await this.repository.alertasDeMonitoramento(
+        filtros
+      );
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Sistema de Manutenção";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Alertas");
+
+    worksheet.mergeCells("A1:J1");
+    const titulo = worksheet.getCell("A1");
+    titulo.value = "Alertas de Monitoramento";
+    titulo.font = { bold: true, size: 16 };
+    titulo.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(1).height = 28;
+
+    worksheet.columns = [
+      { key: "maquina_nome", width: 25 },
+      { key: "setor_nome", width: 20 },
+      { key: "chave", width: 14 },
+      { key: "nivel", width: 12 },
+      { key: "valor", width: 12 },
+      { key: "limite", width: 12 },
+      { key: "duracao", width: 18 },
+      { key: "status", width: 14 },
+      { key: "aberto_em", width: 20 },
+      { key: "virou_os", width: 12 },
+    ];
+
+    const headerRow = worksheet.getRow(2);
+    headerRow.values = [
+      "Máquina",
+      "Setor",
+      "Métrica",
+      "Nível",
+      "Valor",
+      "Limite",
+      "Duração",
+      "Status",
+      "Aberto em",
+      "Virou O.S.?",
+    ];
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    headerRow.height = 32;
+
+    const ROTULO_CHAVE: Record<string, string> = {
+      temperatura: "Temperatura",
+      vibracao: "Vibração",
+      sinal: "Sem sinal",
+    };
+
+    const ROTULO_NIVEL: Record<string, string> = {
+      atencao: "Atenção",
+      critico: "Crítico",
+      sem_sinal: "Sem sinal",
+    };
+
+    dados.forEach((item) => {
+      const row = worksheet.addRow({
+        maquina_nome: item.maquina_nome,
+        setor_nome: item.setor_nome ?? "-",
+        chave: ROTULO_CHAVE[item.chave] ?? item.chave,
+        nivel: ROTULO_NIVEL[item.nivel] ?? item.nivel,
+        valor: item.valor !== null ? Number(item.valor) : "-",
+        limite: item.limite !== null ? Number(item.limite) : "-",
+        duracao: this.formatarDuracao(Number(item.duracao_segundos)),
+        status: item.status,
+        aberto_em: this.formatarDataHora(item.aberto_em),
+        virou_os: item.ordem_servico_id ? "Sim" : "Não",
+      });
+
+      row.alignment = { vertical: "middle" };
+    });
+
+    worksheet.autoFilter = { from: "A2", to: "J2" };
     worksheet.views = [{ state: "frozen", ySplit: 2 }];
 
     return workbook.xlsx.writeBuffer();

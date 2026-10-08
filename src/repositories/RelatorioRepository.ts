@@ -4,9 +4,11 @@ import {
   FiltrosRelatorioOS,
   FiltrosRelatorioMaquina,
   FiltrosRelatorioTecnico,
+  FiltrosRelatorioAlerta,
   RelatorioOS,
   RelatorioIndicadorMaquina,
   RelatorioProdutividadeTecnico,
+  RelatorioAlertaMonitoramento,
 } from "../interfaces/Irelatorio";
 
 
@@ -886,6 +888,88 @@ export class RelatorioRepository {
         AND u.ativo = true
 
       ORDER BY os_em_aberto DESC, u.nome ASC
+      `,
+      params
+    );
+
+    return rows;
+  }
+
+
+  /* =====================================================
+     RELATÓRIO 4
+     ALERTAS DE MONITORAMENTO
+
+     Uma linha por alerta (igual Histórico de O.S., não agregado) — pega
+     tudo que telemetria_alertas já grava (confirmado fora do limite,
+     "sem sinal"), inclusive o que NUNCA virou O.S. (hoje isso só
+     aparece na tela ao vivo de Alertas, sem histórico consultável).
+  ===================================================== */
+
+  async alertasDeMonitoramento(
+    filtros: FiltrosRelatorioAlerta
+  ): Promise<RelatorioAlertaMonitoramento[]> {
+
+    const params: any[] = [filtros.empresaId];
+    const conditions: string[] = [`a.empresa_id = $1`];
+    let paramIndex = 2;
+
+    if (filtros.dataInicial) {
+      conditions.push(`a.aberto_em >= $${paramIndex}::date`);
+      params.push(filtros.dataInicial);
+      paramIndex++;
+    }
+
+    if (filtros.dataFinal) {
+      conditions.push(`a.aberto_em < ($${paramIndex}::date + INTERVAL '1 day')`);
+      params.push(filtros.dataFinal);
+      paramIndex++;
+    }
+
+    if (filtros.setorId !== undefined && filtros.setorId !== null) {
+      conditions.push(`m.setor_id = $${paramIndex}`);
+      params.push(filtros.setorId);
+      paramIndex++;
+    }
+
+    if (filtros.maquinaId !== undefined && filtros.maquinaId !== null) {
+      conditions.push(`a.maquina_id = $${paramIndex}`);
+      params.push(filtros.maquinaId);
+      paramIndex++;
+    }
+
+    const where = `WHERE ${conditions.join(" AND ")}`;
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+
+        a.id,
+        a.maquina_id,
+        m.nome AS maquina_nome,
+        s.nome AS setor_nome,
+
+        a.chave,
+        a.nivel,
+        a.valor,
+        a.limite,
+        a.status,
+        a.detalhe,
+        a.ordem_servico_id,
+
+        a.aberto_em,
+        a.resolvido_em,
+
+        EXTRACT(EPOCH FROM (COALESCE(a.resolvido_em, NOW()) - a.aberto_em)) AS duracao_segundos
+
+      FROM telemetria_alertas a
+
+      JOIN maquinas m ON m.id = a.maquina_id
+      LEFT JOIN setores s ON s.id = m.setor_id
+
+      ${where}
+
+      ORDER BY a.aberto_em DESC
       `,
       params
     );

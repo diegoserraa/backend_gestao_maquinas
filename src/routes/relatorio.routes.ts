@@ -24,4 +24,10 @@ relatorioRoutes.get("/manutencao/preview", exigir("relatorios.ver"), relatorioCo
 relatorioRoutes.get("/tecnicos", exigir("relatorios.exportar"), relatorioController.ExportarProdutividadeTecnico);
 relatorioRoutes.get("/tecnicos/preview", exigir("relatorios.ver"), relatorioController.previewProdutividadeTecnico);
 
+/* =========================
+   ALERTAS DE MONITORAMENTO
+========================= */
+relatorioRoutes.get("/alertas", exigir("relatorios.exportar"), relatorioController.ExportarAlertasMonitoramento);
+relatorioRoutes.get("/alertas/preview", exigir("relatorios.ver"), relatorioController.previewAlertasMonitoramento);
+
 export { relatorioRoutes };

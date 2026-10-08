@@ -188,6 +188,63 @@ export class RelatorioController {
 
 
   /* =====================================================
+     ALERTAS DE MONITORAMENTO
+  ===================================================== */
+
+  ExportarAlertasMonitoramento = async (
+    req: Request,
+    res: Response
+  ) => {
+
+    const { dataInicial, dataFinal, setorId, maquinaId } = req.query;
+
+    const filtros = {
+      empresaId: req.empresaId!,
+      dataInicial: dataInicial ? String(dataInicial) : undefined,
+      dataFinal: dataFinal ? String(dataFinal) : undefined,
+      setorId: setorId !== undefined && setorId !== null ? Number(setorId) : undefined,
+      maquinaId: maquinaId !== undefined && maquinaId !== null ? Number(maquinaId) : undefined,
+    };
+
+    const arquivo =
+      await this.service.ExportarAlertasMonitoramento(filtros);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="alertas-de-monitoramento.xlsx"'
+    );
+
+    return res.send(arquivo);
+  };
+
+  previewAlertasMonitoramento = async (
+    req: Request,
+    res: Response
+  ) => {
+
+    const { dataInicial, dataFinal, setorId, maquinaId } = req.query;
+
+    const filtros = {
+      empresaId: req.empresaId!,
+      dataInicial: dataInicial ? String(dataInicial) : undefined,
+      dataFinal: dataFinal ? String(dataFinal) : undefined,
+      setorId: setorId !== undefined && setorId !== null ? Number(setorId) : undefined,
+      maquinaId: maquinaId !== undefined && maquinaId !== null ? Number(maquinaId) : undefined,
+    };
+
+    const dados =
+      await this.service.previewAlertasMonitoramento(filtros);
+
+    return res.json(dados);
+  };
+
+
+  /* =====================================================
      PREVIEW - HISTÓRICO DE OS
   ===================================================== */
 

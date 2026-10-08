@@ -64,6 +64,26 @@ export interface RelatorioProdutividadeTecnico {
   os_em_aberto: number;
 }
 
+/** Reaproveita o mesmo filtro de Indicadores por Máquina (empresa/período/setor/máquina) */
+export type FiltrosRelatorioAlerta = FiltrosRelatorioMaquina;
+
+export interface RelatorioAlertaMonitoramento {
+  id: number;
+  maquina_id: number;
+  maquina_nome: string;
+  setor_nome: string | null;
+  chave: string; // "temperatura" | "vibracao" | "sinal"
+  nivel: string; // "atencao" | "critico" | "sem_sinal"
+  valor: number | null;
+  limite: number | null;
+  status: string; // "aberto" | "resolvido" | "convertido"
+  detalhe: string | null;
+  ordem_servico_id: number | null;
+  aberto_em: Date;
+  resolvido_em: Date | null;
+  duracao_segundos: number;
+}
+
 export interface RelatorioIndicadorMaquina {
   maquina_id: number;
   maquina_nome: string;
