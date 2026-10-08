@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool } from "../../src/database/connection";
@@ -6,8 +7,18 @@ import { pool } from "../../src/database/connection";
  * Cria DUAS empresas descartáveis (A e B) com dados próprios e apaga tudo
  * no final. Tudo que os testes criam leva o prefixo abaixo, então uma
  * limpeza nunca encosta em dado real.
+ *
+ * O sufixo aleatório é essencial: o vitest roda os arquivos de teste em
+ * paralelo (cada um com seu próprio registro de módulos — este arquivo é
+ * reimportado do zero por arquivo), e um prefixo FIXO fazia o `afterAll`
+ * de um arquivo (limparTudo) apagar a empresa que OUTRO arquivo ainda
+ * estava usando no meio de um teste — causa real de falhas intermitentes
+ * só quando a suíte inteira roda junto (isolado sempre passava). Como
+ * este valor é calculado uma vez no carregamento do módulo, e cada
+ * arquivo de teste tem sua própria cópia do módulo, cada arquivo acaba
+ * com um prefixo único sozinho, sem precisar mudar nenhum outro arquivo.
  */
-export const PREFIXO = "__TESTE_VITEST__";
+export const PREFIXO = `__TESTE_VITEST__${crypto.randomBytes(3).toString("hex")}_`;
 export const SENHA = "Teste@123";
 
 export interface Lado {
