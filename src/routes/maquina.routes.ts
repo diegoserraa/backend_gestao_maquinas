@@ -3,6 +3,7 @@ import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
 import { exigir, exigirQualquer } from "../middlewares/permissao";
 import { LEITURA_DE_APOIO } from "../permissoes/catalogo";
 import { maquinaSchema } from "../schemas/maquina";
+import { planoManutencaoSchema, clonarPlanosSchema } from "../schemas/planoManutencao";
 import { MaquinaController } from "../controllers/MaquinaController";
 import { upload } from "../middlewares/uploadMiddleware";
 
@@ -30,5 +31,12 @@ maquinaRoutes.get("/:id/os", exigir("maquinas.ver"), maquinaController.listarOsP
 
 // PIN de 6 dígitos pra vincular um ESP32 novo a esta máquina (digita na telinha dele)
 maquinaRoutes.post("/:id/pareamento", exigir("maquinas.editar"), maquinaController.gerarPareamento);
+
+// Planos de manutenção preventiva (vários por máquina, cada um com seu próprio ritmo)
+maquinaRoutes.get("/:id/planos-manutencao", lerMaquinas, maquinaController.listarPlanosManutencao);
+maquinaRoutes.post("/:id/planos-manutencao", exigir("maquinas.editar"), validarBody(planoManutencaoSchema), maquinaController.criarPlanoManutencao);
+maquinaRoutes.post("/:id/planos-manutencao/clonar", exigir("maquinas.editar"), validarBody(clonarPlanosSchema), maquinaController.clonarPlanosManutencao);
+maquinaRoutes.put("/:id/planos-manutencao/:planoId", exigir("maquinas.editar"), validarBody(planoManutencaoSchema), maquinaController.atualizarPlanoManutencao);
+maquinaRoutes.delete("/:id/planos-manutencao/:planoId", exigir("maquinas.editar"), maquinaController.excluirPlanoManutencao);
 
 export { maquinaRoutes };

@@ -56,9 +56,10 @@ export class OrdemServicoRepository {
       id_solicitante,
       empresa_id,
       maquina_parada,
-      motivo_parada
+      motivo_parada,
+      plano_manutencao_id
     )
-    VALUES ($1,$2,$3,$4,$5,COALESCE($6, NOW()),$7,$8,$9,$10,$11,$12,$13)
+    VALUES ($1,$2,$3,$4,$5,COALESCE($6, NOW()),$7,$8,$9,$10,$11,$12,$13,$14)
     RETURNING *
     `,
     [
@@ -75,6 +76,7 @@ export class OrdemServicoRepository {
       empresaId,
       os.maquina_parada ?? false,
       os.maquina_parada ? os.motivo_parada ?? null : null,
+      os.plano_manutencao_id ?? null,
     ]
   );
 
@@ -192,6 +194,24 @@ export class OrdemServicoRepository {
     return result.rows.length > 0;
 
 }
+
+  /** Mesma ideia de existePreventivaPendente, mas por PLANO específico — uma
+   * máquina pode ter vários planos, cada um com sua própria O.S. em aberto
+   * ao mesmo tempo; isso não pode bloquear um plano por causa de outro. */
+  async existePendentePorPlano(planoManutencaoId: number, empresaId: string): Promise<boolean> {
+    const result = await pool.query(
+      `
+      SELECT id
+      FROM ordens_servico
+      WHERE plano_manutencao_id = $1
+      AND empresa_id = $2
+      AND status IN ('ABERTA', 'ATRIBUIDA', 'EM_ANDAMENTO', 'PAUSADA')
+      LIMIT 1
+      `,
+      [planoManutencaoId, empresaId]
+    );
+    return result.rows.length > 0;
+  }
 async indicadoresPorMaquina(maquinaId: number, empresaId: string) {
   const { rows } = await pool.query(
     `

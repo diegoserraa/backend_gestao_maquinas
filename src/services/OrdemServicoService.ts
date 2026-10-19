@@ -4,6 +4,7 @@ import { NotificacaoSistemaService } from "./notificacaoSistemaService";
 import { IOrdemServico } from "../interfaces/IordemServico";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
 import { ParceiroRepository } from "../repositories/ParceiroRepository";
+import { PlanoManutencaoRepository } from "../repositories/PlanoManutencaoRepository";
 import { Pagina } from "../utils/paginacao";
 import { logger } from "../config/logger";
 
@@ -19,6 +20,7 @@ const TRANSICOES: Record<string, string[]> = {
 export class OrdemServicoService {
 
   private parceiroRepository = new ParceiroRepository();
+  private planoManutencaoRepository = new PlanoManutencaoRepository();
 
  constructor(
   private repo: OrdemServicoRepository,
@@ -343,26 +345,39 @@ async finalizar(
       os.tipo_manutencao === "PREVENTIVA" &&
       maquina
     ) {
-      const hoje = new Date();
-      const proximaManutencao =
-        new Date(dataResolucao);
+      if (os.plano_manutencao_id) {
+        // gerada por um plano (dias ou horas) — só ESTE plano avança;
+        // os outros planos da mesma máquina continuam no próprio ritmo
+        const horasAtuais = await this.planoManutencaoRepository.horasAtuais(maquina.id!);
+        await this.planoManutencaoRepository.avancar(os.plano_manutencao_id, empresaId, horasAtuais);
 
-      proximaManutencao.setDate(
-        proximaManutencao.getDate() +
-        maquina.intervalo_manutencao_dias
-      );
+        log.info(
+          { planoId: os.plano_manutencao_id, maquinaId: maquina.id },
+          "plano de manutenção avançado após finalização da O.S."
+        );
+      } else if (maquina.intervalo_manutencao_dias) {
+        // comportamento legado: campo único da máquina (sem plano específico)
+        const hoje = new Date();
+        const proximaManutencao =
+          new Date(dataResolucao);
 
-      await this.maquinaRepository.registrarPreventiva(
-  maquina.id!,
-  hoje,
-  proximaManutencao,
-  empresaId
-);
+        proximaManutencao.setDate(
+          proximaManutencao.getDate() +
+          maquina.intervalo_manutencao_dias
+        );
 
-      log.info(
-        { maquinaId: maquina.id, ultima: dataResolucao, proxima: proximaManutencao },
-        "datas de manutenção preventiva atualizadas"
-      );
+        await this.maquinaRepository.registrarPreventiva(
+          maquina.id!,
+          hoje,
+          proximaManutencao,
+          empresaId
+        );
+
+        log.info(
+          { maquinaId: maquina.id, ultima: dataResolucao, proxima: proximaManutencao },
+          "datas de manutenção preventiva atualizadas (legado)"
+        );
+      }
     }
 
     const nomeMaquina =

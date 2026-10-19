@@ -37,6 +37,10 @@ export interface IOrdemServico {
   // janelas); duração sempre calculada na consulta, nunca guardada aqui
   maquina_parada?: boolean;
   motivo_parada?: string | null;
+
+  // amarra a O.S. ao plano de manutenção preventiva que a gerou (null =
+  // O.S. manual, ou preventiva "legada" pelo campo único da máquina)
+  plano_manutencao_id?: number | null;
 }
 
 export interface IPausaOS {

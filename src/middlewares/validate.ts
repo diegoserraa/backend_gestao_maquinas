@@ -26,7 +26,7 @@ export function validarBody(schema: ZodType): RequestHandler {
     };
 }
 
-const PARAMS_NUMERICOS = ["id", "maquinaId", "usuario_id"];
+const PARAMS_NUMERICOS = ["id", "maquinaId", "usuario_id", "planoId"];
 const MAX_INT4 = 2147483647;
 
 /** Garante que :id, :maquinaId e :usuario_id são inteiros positivos (senão 400, e não erro de banco). */

@@ -62,6 +62,16 @@ cron.schedule(
 
         }
 
+        try{
+
+            await service.gerarOrdensDosPlanos();
+
+        }catch(error){
+
+            log.error({ err: error }, "erro ao gerar preventivas dos planos de manutenção");
+
+        }
+
     },
     {
         timezone:"America/Sao_Paulo"

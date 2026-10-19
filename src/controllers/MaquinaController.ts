@@ -3,11 +3,65 @@ import { lerPagina, responderPagina } from "../utils/paginacao";
 import { escopoOS } from "../middlewares/permissao";
 import { MaquinaService } from "../services/MaquinaService";
 import { PareamentoService } from "../services/PareamentoService";
+import { PlanoManutencaoService } from "../services/PlanoManutencaoService";
 
 export class MaquinaController {
 
     private service = new MaquinaService();
     private pareamentoService = new PareamentoService();
+    private planoManutencaoService = new PlanoManutencaoService();
+
+    listarPlanosManutencao = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.id);
+            return res.json(await this.planoManutencaoService.listar(maquinaId, req.empresaId!));
+        } catch (error: any) {
+            return res.status(error.status ?? 400).json({ message: error.message || "Erro ao listar planos de manutenção" });
+        }
+    };
+
+    criarPlanoManutencao = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.id);
+            const resultado = await this.planoManutencaoService.criar(maquinaId, req.body, req.empresaId!);
+            return res.status(201).json(resultado);
+        } catch (error: any) {
+            return res.status(error.status ?? 400).json({ message: error.message || "Erro ao criar plano de manutenção" });
+        }
+    };
+
+    atualizarPlanoManutencao = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.id);
+            const planoId = Number(req.params.planoId);
+            const resultado = await this.planoManutencaoService.atualizar(planoId, maquinaId, req.body, req.empresaId!);
+            return res.json(resultado);
+        } catch (error: any) {
+            return res.status(error.status ?? 400).json({ message: error.message || "Erro ao atualizar plano de manutenção" });
+        }
+    };
+
+    excluirPlanoManutencao = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.id);
+            const planoId = Number(req.params.planoId);
+            await this.planoManutencaoService.excluir(planoId, maquinaId, req.empresaId!);
+            return res.sendStatus(204);
+        } catch (error: any) {
+            return res.status(error.status ?? 400).json({ message: error.message || "Erro ao excluir plano de manutenção" });
+        }
+    };
+
+    clonarPlanosManutencao = async (req: Request, res: Response) => {
+        try {
+            const maquinaId = Number(req.params.id);
+            const { maquina_origem_id } = req.body;
+            const resultado = await this.planoManutencaoService.clonarDeOutraMaquina(maquinaId, Number(maquina_origem_id), req.empresaId!);
+            return res.status(201).json(resultado);
+        } catch (error: any) {
+            return res.status(error.status ?? 400).json({ message: error.message || "Erro ao copiar planos de manutenção" });
+        }
+    };
 
     /** Gera o PIN de 6 dígitos pra digitar na telinha do ESP32 e vincular essa máquina. */
     gerarPareamento = async (req: Request, res: Response) => {
