@@ -122,8 +122,10 @@ export class TelemetriaRepository {
      * payload_bruto NÃO é exposto aqui de propósito.
      */
     async listarAtual(empresaId: string): Promise<ITelemetriaAtualComMaquina[]> {
+        // módulo "Monitoramento" independente do cadastro de máquinas: só
+        // mostra quem foi ativado manualmente (ver MaquinaRepository.alternarMonitoramento)
         const { rows } = await pool.query(
-            `${SELECT_ATUAL} WHERE m.empresa_id = $1 ORDER BY m.nome`,
+            `${SELECT_ATUAL} WHERE m.empresa_id = $1 AND m.monitoramento_ativo ORDER BY m.nome`,
             [empresaId]
         );
         return rows.map(this.normalizar);
@@ -244,17 +246,143 @@ export class TelemetriaRepository {
         }));
     }
 
-    // pg devolve NUMERIC como string — convertemos para number
-    private normalizar = (r: any): ITelemetriaAtualComMaquina => {
-        const limitesBrutos = r.limites ?? {};
-        const limites: ITelemetriaAtualComMaquina["limites"] = {};
-        for (const [chave, v] of Object.entries<any>(limitesBrutos)) {
+    /**
+     * Relatório do módulo de Monitoramento: leituras cruas de um período
+     * (uma máquina ou todas, igual o filtro vier) + um resumo calculado
+     * sobre o período INTEIRO (não só as linhas devolvidas — ver "limite").
+     * "horas trabalhadas" só sai preenchido com uma máquina só selecionada:
+     * horímetros de máquinas diferentes não têm o que somar entre si.
+     */
+    async listarRelatorio(params: {
+        empresaId: string;
+        maquinaId: number | null;
+        desde: Date | null;
+        ate: Date | null;
+        limite: number;
+    }): Promise<{ leituras: any[]; resumo: any; porDia: any[]; totalNoPeriodo: number }> {
+        const { empresaId, maquinaId, desde, ate, limite } = params;
+
+        const condicoes = `
+            t.empresa_id = $1
+            AND ($2::int IS NULL OR t.maquina_id = $2)
+            AND ($3::timestamptz IS NULL OR t.recebido_em >= $3)
+            AND ($4::timestamptz IS NULL OR t.recebido_em <= $4)
+        `;
+
+        const [leiturasRes, resumoRes, porDiaRes] = await Promise.all([
+            pool.query(
+                `
+                SELECT t.id, t.maquina_id, m.nome AS maquina_nome,
+                       t.temperatura, t.vibracao, t.horas_ligadas, t.recebido_em,
+                       lim.limites
+                FROM telemetria_leituras t
+                JOIN maquinas m ON m.id = t.maquina_id
+                LEFT JOIN LATERAL (
+                    SELECT jsonb_object_agg(mp.chave, jsonb_build_object(
+                        'atencao', mp.atencao,
+                        'alarme',  mp.alarme,
+                        'minimo',  mp.minimo
+                    )) AS limites
+                    FROM maquina_parametros mp
+                    WHERE mp.maquina_id = m.id AND mp.ativo
+                ) lim ON true
+                WHERE ${condicoes}
+                ORDER BY t.recebido_em DESC
+                LIMIT $5
+                `,
+                [empresaId, maquinaId, desde, ate, limite]
+            ),
+            pool.query(
+                `
+                SELECT
+                    COUNT(*)::int                AS total,
+                    MIN(t.recebido_em)            AS periodo_desde,
+                    MAX(t.recebido_em)             AS periodo_ate,
+                    AVG(t.temperatura)            AS temp_media,
+                    MIN(t.temperatura)            AS temp_min,
+                    MAX(t.temperatura)            AS temp_max,
+                    AVG(t.vibracao)               AS vib_media,
+                    MIN(t.vibracao)               AS vib_min,
+                    MAX(t.vibracao)               AS vib_max,
+                    MIN(t.horas_ligadas)          AS horas_min,
+                    MAX(t.horas_ligadas)          AS horas_max
+                FROM telemetria_leituras t
+                WHERE ${condicoes}
+                `,
+                [empresaId, maquinaId, desde, ate]
+            ),
+            // por dia, pro gráfico de tendência — sempre sobre o período
+            // inteiro (nunca cortado pelo "limite" da lista crua acima)
+            pool.query(
+                `
+                SELECT
+                    date_trunc('day', t.recebido_em AT TIME ZONE 'America/Sao_Paulo') AS dia,
+                    COUNT(*)::int     AS leituras,
+                    AVG(t.temperatura) AS temp_media,
+                    AVG(t.vibracao)    AS vib_media
+                FROM telemetria_leituras t
+                WHERE ${condicoes}
+                GROUP BY 1
+                ORDER BY 1
+                `,
+                [empresaId, maquinaId, desde, ate]
+            ),
+        ]);
+
+        const num = (v: any) => (v === null || v === undefined ? null : Number(v));
+        const r = resumoRes.rows[0];
+
+        const leituras = leiturasRes.rows.map((row) => ({
+            ...row,
+            temperatura: num(row.temperatura),
+            vibracao: num(row.vibracao),
+            horas_ligadas: num(row.horas_ligadas),
+            limites: this.normalizarLimites(row.limites),
+        }));
+
+        const totalNoPeriodo = Number(r?.total ?? 0);
+        const horasMin = num(r?.horas_min);
+        const horasMax = num(r?.horas_max);
+
+        const resumo = {
+            total_leituras: totalNoPeriodo,
+            periodo_desde: r?.periodo_desde ?? null,
+            periodo_ate: r?.periodo_ate ?? null,
+            temperatura: { media: num(r?.temp_media), minimo: num(r?.temp_min), maximo: num(r?.temp_max) },
+            vibracao: { media: num(r?.vib_media), minimo: num(r?.vib_min), maximo: num(r?.vib_max) },
+            horas:
+                maquinaId != null
+                    ? { inicio: horasMin, fim: horasMax, trabalhadas: horasMin != null && horasMax != null ? horasMax - horasMin : null }
+                    : null,
+        };
+
+        const porDia = porDiaRes.rows.map((row) => ({
+            dia: row.dia,
+            leituras: Number(row.leituras),
+            temperatura: num(row.temp_media),
+            vibracao: num(row.vib_media),
+        }));
+
+        return { leituras, resumo, porDia, totalNoPeriodo };
+    }
+
+    // limites configurados (maquina_parametros) vêm da query como jsonb cru —
+    // usado tanto na telemetria atual quanto nas leituras do relatório
+    private normalizarLimites(bruto: any): Record<string, { atencao: number | null; alarme: number | null; minimo: number | null }> {
+        const limites: Record<string, { atencao: number | null; alarme: number | null; minimo: number | null }> = {};
+        for (const [chave, v] of Object.entries<any>(bruto ?? {})) {
             limites[chave] = {
                 atencao: v?.atencao === null || v?.atencao === undefined ? null : Number(v.atencao),
                 alarme: v?.alarme === null || v?.alarme === undefined ? null : Number(v.alarme),
                 minimo: v?.minimo === null || v?.minimo === undefined ? null : Number(v.minimo),
             };
         }
+        return limites;
+    }
+
+    // pg devolve NUMERIC como string — convertemos para number
+    private normalizar = (r: any): ITelemetriaAtualComMaquina => {
+        const limites = this.normalizarLimites(r.limites);
 
         return {
             maquina_id: Number(r.maquina_id),

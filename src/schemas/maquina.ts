@@ -15,3 +15,14 @@ export const maquinaSchema = z.object({
         z.string().regex(/^\d{4}-\d{2}-\d{2}/, "use o formato AAAA-MM-DD").optional()
     ),
 });
+
+/** "Vincular máquina do cliente" — cadastro enxuto pro módulo de
+ * Monitoramento vendido à parte (ver MaquinaService.criarVinculoExterno).
+ * JSON puro (sem upload), por isso bem mais curto que maquinaSchema. */
+export const vinculoExternoSchema = z.object({
+    nome: z.string().trim().min(1).max(150),
+    setor_id: inteiroPositivo,
+    referencia_externa: textoOpcional(150),
+    sistema_origem: textoOpcional(100),
+    observacao: textoOpcional(500),
+});

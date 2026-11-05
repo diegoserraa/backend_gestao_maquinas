@@ -186,6 +186,37 @@ criar = async (req: Request, res: Response) => {
 
     return res.json(maquina);
 };
+alternarMonitoramento = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const id = Number(req.params.id);
+        const ativo = Boolean(req.body?.ativo);
+
+        const maquina =
+            await this.service.alternarMonitoramento(id, ativo, req.empresaId!);
+
+        return res.json(maquina);
+    } catch (error: any) {
+        return res.status(error.status ?? 400).json({
+            message: error.message || "Erro ao atualizar monitoramento da máquina",
+        });
+    }
+};
+criarVinculoExterno = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const maquina = await this.service.criarVinculoExterno(req.body, req.empresaId!);
+        return res.status(201).json(maquina);
+    } catch (error: any) {
+        return res.status(error.status ?? 400).json({
+            message: error.message || "Erro ao vincular máquina do cliente",
+        });
+    }
+};
 listarOsPorMaquina = async (req: Request, res: Response) => {
     const id = Number(req.params.id);
 

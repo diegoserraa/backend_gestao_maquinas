@@ -1,7 +1,22 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { pool } from "../database/connection";
-import { IMaquina } from "../interfaces/Imaquina";
+import { IMaquina, INovoVinculoExterno } from "../interfaces/Imaquina";
 import { Pagina } from "../utils/paginacao";
+
+async function transacao<T>(fn: (cliente: PoolClient) => Promise<T>): Promise<T> {
+    const cliente = await pool.connect();
+    try {
+        await cliente.query("BEGIN");
+        const resultado = await fn(cliente);
+        await cliente.query("COMMIT");
+        return resultado;
+    } catch (erro) {
+        await cliente.query("ROLLBACK").catch(() => undefined);
+        throw erro;
+    } finally {
+        cliente.release();
+    }
+}
 
 export class MaquinaRepository {
 
@@ -10,9 +25,13 @@ export class MaquinaRepository {
     SELECT
       m.*,
       s.id AS setor_id_ref,
-      s.nome AS setor_nome
+      s.nome AS setor_nome,
+      v.referencia_externa,
+      v.sistema_origem,
+      (v.maquina_id IS NOT NULL) AS vinculo_externo
     FROM maquinas m
     LEFT JOIN setores s ON s.id = m.setor_id
+    LEFT JOIN maquinas_vinculo_externo v ON v.maquina_id = m.id
     WHERE m.empresa_id = $1
     ORDER BY m.id
     LIMIT $2 OFFSET $3
@@ -35,6 +54,38 @@ export class MaquinaRepository {
 
   return { itens, total: contagem.rows[0].n };
 }
+
+    /**
+     * "Vincular máquina do cliente" — cadastro enxuto + já marca como
+     * monitorada na hora (é literalmente pra isso que ela existe). Cria a
+     * linha em "maquinas" e a em "maquinas_vinculo_externo" juntas: a simples
+     * presença dessa segunda linha já é o que diferencia essa máquina de um
+     * cadastro normal na tela (mesmo quando a referência fica em branco).
+     */
+    async criarVinculoExterno(dados: INovoVinculoExterno, empresaId: string): Promise<IMaquina> {
+        return transacao(async (cliente) => {
+            const { rows: maquinaRows } = await cliente.query(
+                `
+                INSERT INTO maquinas (nome, modelo, setor_id, status, empresa_id, monitoramento_ativo)
+                VALUES ($1, $2, $3, 'ativa', $4, true)
+                RETURNING *
+                `,
+                [dados.nome, "Monitoramento (vínculo externo)", dados.setor_id, empresaId]
+            );
+            const maquina = maquinaRows[0];
+
+            const { rows: vinculoRows } = await cliente.query(
+                `
+                INSERT INTO maquinas_vinculo_externo (maquina_id, referencia_externa, sistema_origem, observacao)
+                VALUES ($1, $2, $3, $4)
+                RETURNING referencia_externa, sistema_origem
+                `,
+                [maquina.id, dados.referencia_externa ?? null, dados.sistema_origem ?? null, dados.observacao ?? null]
+            );
+
+            return { ...maquina, ...vinculoRows[0], vinculo_externo: true };
+        });
+    }
     async atualizarQrCode(id: number, qrCode: string, empresaId: string): Promise<void> {
 
         await pool.query(
@@ -202,6 +253,22 @@ export class MaquinaRepository {
         RETURNING *
         `,
         [status, id, empresaId]
+    );
+
+    return rows[0] ?? null;
+}
+    // ativa/desativa a máquina no módulo de Monitoramento — reaproveita o
+    // cadastro que já existe, não cria registro novo nenhum
+    async alternarMonitoramento(id: number, ativo: boolean, empresaId: string): Promise<IMaquina | null> {
+
+    const { rows } = await pool.query(
+        `
+        UPDATE maquinas
+        SET monitoramento_ativo = $1
+        WHERE id = $2 AND empresa_id = $3
+        RETURNING *
+        `,
+        [ativo, id, empresaId]
     );
 
     return rows[0] ?? null;

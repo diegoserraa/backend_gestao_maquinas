@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validarBody, protegerParamsNumericos } from "../middlewares/validate";
 import { exigir, exigirQualquer } from "../middlewares/permissao";
 import { LEITURA_DE_APOIO } from "../permissoes/catalogo";
-import { maquinaSchema } from "../schemas/maquina";
+import { maquinaSchema, vinculoExternoSchema } from "../schemas/maquina";
 import { planoManutencaoSchema, clonarPlanosSchema } from "../schemas/planoManutencao";
 import { MaquinaController } from "../controllers/MaquinaController";
 import { upload } from "../middlewares/uploadMiddleware";
@@ -25,6 +25,13 @@ maquinaRoutes.post("/", exigir("maquinas.criar"), upload.single("imagem"), valid
 maquinaRoutes.put("/:id", exigir("maquinas.editar"), upload.single("imagem"), validarBody(maquinaSchema), maquinaController.atualizar);
 maquinaRoutes.delete("/:id", exigir("maquinas.excluir"), maquinaController.excluir);
 maquinaRoutes.patch("/:id/status", exigir("maquinas.alterar_status"), maquinaController.alternarStatus);
+// ativar/desativar no módulo de Monitoramento (dashboard só mostra quem está ativo aqui)
+maquinaRoutes.patch("/:id/monitoramento", exigir("monitoramento.configurar_limites"), maquinaController.alternarMonitoramento);
+
+// "Vincular máquina do cliente" — cadastro enxuto pra quem gerencia o parque
+// em outro sistema e só quer plugar o sensor aqui (mesma permissão da tela
+// "Adicionar máquinas", que é de onde essa ação vem)
+maquinaRoutes.post("/vinculo-externo", exigir("monitoramento.configurar_limites"), validarBody(vinculoExternoSchema), maquinaController.criarVinculoExterno);
 
 // O.S. da máquina: devolve só as que o usuário pode ver (o controller aplica o escopo)
 maquinaRoutes.get("/:id/os", exigir("maquinas.ver"), maquinaController.listarOsPorMaquina);

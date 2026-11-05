@@ -1,4 +1,4 @@
-import { IMaquina } from "../interfaces/Imaquina";
+import { IMaquina, INovoVinculoExterno } from "../interfaces/Imaquina";
 import { MaquinaRepository } from "../repositories/MaquinaRepository";
 import { SetorRepository } from "../repositories/SetorRepository";
 import { Pagina } from "../utils/paginacao";
@@ -268,6 +268,23 @@ export class MaquinaService {
                 : "ativa";
 
         return this.repository.alternarStatus(id, novoStatus, empresaId);
+    }
+
+    async alternarMonitoramento(id: number, ativo: boolean, empresaId: string) {
+
+        const existente =
+            await this.repository.buscarPorId(id, empresaId);
+
+        if (!existente) {
+            throw new Error("Máquina não encontrada");
+        }
+
+        return this.repository.alternarMonitoramento(id, ativo, empresaId);
+    }
+
+    async criarVinculoExterno(dados: INovoVinculoExterno, empresaId: string) {
+        await this.validarSetor(dados.setor_id, empresaId);
+        return this.repository.criarVinculoExterno(dados, empresaId);
     }
 
     async listarOsPorMaquina(maquinaId: number, empresaId: string, apenasDoUsuario: number | null = null) {

@@ -122,6 +122,33 @@ export class TelemetriaService {
         );
     }
 
+    async listarRelatorio(params: {
+        empresaId: string;
+        maquinaId: number | null;
+        desde: Date | null;
+        ate: Date | null;
+        limite: number;
+    }) {
+        // teto generoso (dá pra extrair "o mês inteiro" de uma máquina só:
+        // a cada 8s isso é ~324 mil linhas — mas protege contra um filtro
+        // vazio/errado varrer a tabela toda sem limite nenhum)
+        const limiteSeguro = Math.min(Math.max(Number(params.limite) || 5000, 1), 50_000);
+
+        const { leituras, resumo, porDia, totalNoPeriodo } = await this.repository.listarRelatorio({
+            ...params,
+            limite: limiteSeguro,
+        });
+
+        return {
+            leituras,
+            resumo,
+            porDia,
+            // a lista pode vir cortada pelo limite; o resumo (count/avg/min/max)
+            // e o porDia sempre são calculados sobre o período inteiro, sem esse corte
+            truncado: totalNoPeriodo > leituras.length,
+        };
+    }
+
     listarHistoricoAgregado(
         maquinaId: number,
         faixa: FaixaHistorico,

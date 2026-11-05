@@ -89,6 +89,44 @@ export class TelemetriaController {
         }
     };
 
+    // GET /telemetria/relatorio?maquina_id=&desde=ISO&ate=ISO&limite=
+    // leituras cruas do período (uma máquina ou todas) + resumo — alimenta
+    // a tela de Relatórios do módulo de Monitoramento.
+    relatorio = async (req: Request, res: Response) => {
+        try {
+            const { maquina_id, desde, ate, limite } = req.query;
+
+            let maquinaId: number | null = null;
+            if (typeof maquina_id === "string" && maquina_id.trim() !== "") {
+                const n = Number(maquina_id);
+                if (!Number.isInteger(n) || n <= 0) {
+                    return res.status(400).json({ message: "maquina_id inválido" });
+                }
+                maquinaId = n;
+            }
+
+            const parseData = (v: unknown): Date | null => {
+                if (typeof v !== "string" || v.trim() === "") return null;
+                const d = new Date(v);
+                return isNaN(d.getTime()) ? null : d;
+            };
+
+            const dados = await this.service.listarRelatorio({
+                empresaId: req.empresaId!,
+                maquinaId,
+                desde: parseData(desde),
+                ate: parseData(ate),
+                limite: Number(limite),
+            });
+
+            return res.json(dados);
+        } catch (error: any) {
+            return res.status(500).json({
+                message: error.message || "Erro ao gerar relatório de telemetria",
+            });
+        }
+    };
+
     // GET /telemetria/:maquinaId/historico-agregado?faixa=1h&metrica=temperatura
     historicoAgregado = async (req: Request, res: Response) => {
         try {

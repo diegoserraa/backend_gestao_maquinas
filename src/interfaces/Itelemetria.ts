@@ -57,3 +57,47 @@ export interface IPontoAgregado {
     minimo: number | null;
     maximo: number | null;
 }
+
+/** Linha "crua" do relatório de telemetria — igual a ITelemetriaLeitura, com
+ * o nome da máquina junto (útil quando o relatório cobre várias máquinas) e
+ * os limites configurados dela (pra colorir atenção/crítico na tabela do
+ * front, mesma régua do resto do sistema). */
+export interface ITelemetriaLeituraComMaquina extends ITelemetriaLeitura {
+    maquina_nome: string | null;
+    limites: Record<string, ILimiteMetrica>;
+}
+
+export interface IFaixaMetrica {
+    media: number | null;
+    minimo: number | null;
+    maximo: number | null;
+}
+
+/** Resumo do período do relatório — "horas" só vem preenchido quando o
+ * filtro é de uma máquina só (horímetro é por máquina, não dá pra somar
+ * entre máquinas diferentes). */
+export interface IResumoRelatorioTelemetria {
+    total_leituras: number;
+    periodo_desde: Date | null;
+    periodo_ate: Date | null;
+    temperatura: IFaixaMetrica;
+    vibracao: IFaixaMetrica;
+    horas: { inicio: number | null; fim: number | null; trabalhadas: number | null } | null;
+}
+
+/** Um ponto por dia do período — alimenta o gráfico de tendência do relatório.
+ * Calculado sobre o período INTEIRO (igual o resumo), nunca sobre a lista
+ * cortada pelo "limite" — senão um período grande mostraria só o fim dele. */
+export interface IPontoRelatorioDiario {
+    dia: Date;
+    leituras: number;
+    temperatura: number | null;
+    vibracao: number | null;
+}
+
+export interface IRelatorioTelemetria {
+    leituras: ITelemetriaLeituraComMaquina[];
+    resumo: IResumoRelatorioTelemetria;
+    porDia: IPontoRelatorioDiario[];
+    truncado: boolean;
+}
