@@ -13,6 +13,15 @@ import {
 // verdade é o Postgres (date_trunc + generate_series), não mais um mock.
 const TZ_PADRAO = "America/Sao_Paulo";
 
+// mesmo limiar do firmware (LIMIAR_RODANDO em telemetria_esp32.ino) e do
+// front (LIMIAR_VIBRACAO_RODANDO em monitoramentoHelpers.ts): abaixo disso
+// é ruído de sensor parado (ESP32 energizado, máquina desligada). Usado só
+// pra média/mín/máx de temperatura e vibração do relatório (ver
+// listarRelatorio) — senão horas de máquina parada "diluem" a média de
+// quando ela está rodando de verdade. A contagem de leituras e a tabela
+// crua continuam mostrando tudo, sem esse filtro.
+const LIMIAR_RODANDO = 0.15;
+
 const BUCKET_CFG: Record<
     FaixaHistorico,
     { pontos: number; passo: string; truncUnidade: string | null }
@@ -295,37 +304,40 @@ export class TelemetriaRepository {
             pool.query(
                 `
                 SELECT
-                    COUNT(*)::int                AS total,
-                    MIN(t.recebido_em)            AS periodo_desde,
-                    MAX(t.recebido_em)             AS periodo_ate,
-                    AVG(t.temperatura)            AS temp_media,
-                    MIN(t.temperatura)            AS temp_min,
-                    MAX(t.temperatura)            AS temp_max,
-                    AVG(t.vibracao)               AS vib_media,
-                    MIN(t.vibracao)               AS vib_min,
-                    MAX(t.vibracao)               AS vib_max,
-                    MIN(t.horas_ligadas)          AS horas_min,
-                    MAX(t.horas_ligadas)          AS horas_max
+                    COUNT(*)::int                                            AS total,
+                    MIN(t.recebido_em)                                       AS periodo_desde,
+                    MAX(t.recebido_em)                                       AS periodo_ate,
+                    AVG(t.temperatura) FILTER (WHERE t.vibracao >= $5)       AS temp_media,
+                    MIN(t.temperatura) FILTER (WHERE t.vibracao >= $5)       AS temp_min,
+                    MAX(t.temperatura) FILTER (WHERE t.vibracao >= $5)       AS temp_max,
+                    AVG(t.vibracao)    FILTER (WHERE t.vibracao >= $5)       AS vib_media,
+                    MIN(t.vibracao)    FILTER (WHERE t.vibracao >= $5)       AS vib_min,
+                    MAX(t.vibracao)    FILTER (WHERE t.vibracao >= $5)       AS vib_max,
+                    MIN(t.horas_ligadas)                                     AS horas_min,
+                    MAX(t.horas_ligadas)                                     AS horas_max
                 FROM telemetria_leituras t
                 WHERE ${condicoes}
                 `,
-                [empresaId, maquinaId, desde, ate]
+                [empresaId, maquinaId, desde, ate, LIMIAR_RODANDO]
             ),
             // por dia, pro gráfico de tendência — sempre sobre o período
-            // inteiro (nunca cortado pelo "limite" da lista crua acima)
+            // inteiro (nunca cortado pelo "limite" da lista crua acima).
+            // média só das leituras com a máquina rodando (ver LIMIAR_RODANDO
+            // acima) — dia em que ela não rodou nada vem com media = null
+            // (o front já sabe desenhar um buraco no gráfico pra isso).
             pool.query(
                 `
                 SELECT
-                    date_trunc('day', t.recebido_em AT TIME ZONE 'America/Sao_Paulo') AS dia,
-                    COUNT(*)::int     AS leituras,
-                    AVG(t.temperatura) AS temp_media,
-                    AVG(t.vibracao)    AS vib_media
+                    date_trunc('day', t.recebido_em AT TIME ZONE 'America/Sao_Paulo')      AS dia,
+                    COUNT(*)::int                                                           AS leituras,
+                    AVG(t.temperatura) FILTER (WHERE t.vibracao >= $5)                      AS temp_media,
+                    AVG(t.vibracao)    FILTER (WHERE t.vibracao >= $5)                      AS vib_media
                 FROM telemetria_leituras t
                 WHERE ${condicoes}
                 GROUP BY 1
                 ORDER BY 1
                 `,
-                [empresaId, maquinaId, desde, ate]
+                [empresaId, maquinaId, desde, ate, LIMIAR_RODANDO]
             ),
         ]);
 
